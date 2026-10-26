@@ -1,0 +1,3296 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Nhận diện ô nhiễm không khí - Cùng Conan khám phá thành phố An Lành</title>
+  <!-- Tailwind CSS CDN cho các tiện ích bố cục cơ bản, kết hợp CSS tùy chỉnh chuyên sâu -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* ==========================================================================
+       1. BIẾN THIẾT KẾ & FONT HỆ THỐNG HỖ TRỢ TIẾNG VIỆT ĐẦY ĐỦ
+       ========================================================================== */
+    :root {
+      --font-main: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+      --bg-cream: #fbf4e2;
+      --card-bg: #fffdf7;
+      --card-border: #dec084;
+      --card-shadow: 0 4px 12px rgba(138, 102, 42, 0.12);
+      --navy-dark: #092c58;
+      --navy-light: #134a8e;
+      --col-n2: #0066ff;
+      --col-o2: #16b31e;
+      --col-co2: #ef5b0c;
+      --col-h2o: #00b4d8;
+      --col-toxic: #7e22ce;
+      --col-smoke: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      font-family: var(--font-main);
+      background-color: var(--bg-cream);
+      color: #1e293b;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    /* Vùng an toàn cho thiết bị có tai thỏ / thanh điều hướng */
+    .app-shell {
+      width: 100%;
+      max-width: 1560px;
+      margin: 0 auto;
+      padding:
+        max(6px, env(safe-area-inset-top))
+        max(10px, env(safe-area-inset-right))
+        max(8px, env(safe-area-inset-bottom))
+        max(10px, env(safe-area-inset-left));
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+
+    /* ==========================================================================
+       2. ĐẦU TRANG (HEADER BANNER THÀNH PHỐ AN LÀNH & NHÂN VẬT)
+       ========================================================================== */
+    .top-banner {
+      position: relative;
+      width: 100%;
+      min-height: 108px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #5eb5f7 0%, #9bd6ff 55%, #dff4ff 82%, #b9e6a3 100%);
+      border: 2px solid #d4b475;
+      box-shadow: 0 3px 10px rgba(15, 45, 90, 0.12);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 14px;
+      flex-shrink: 0;
+    }
+
+    .city-bg-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .banner-left-char,
+    .banner-right-char {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: flex-end;
+      flex-shrink: 0;
+      pointer-events: none;
+    }
+
+    .banner-center-titles {
+      position: relative;
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      flex: 1;
+      padding: 0 8px;
+    }
+
+    .main-title {
+      margin: 0;
+      font-size: clamp(1.25rem, 2.5vw, 2.05rem);
+      font-weight: 900;
+      letter-spacing: 0.02em;
+      color: #ffffff;
+      text-transform: uppercase;
+      line-height: 1.15;
+      text-shadow:
+        0 2px 0 #092c58,
+        0 -2px 0 #092c58,
+        2px 0 0 #092c58,
+        -2px 0 0 #092c58,
+        2px 2px 0 #092c58,
+        -2px 2px 0 #092c58,
+        2px -2px 0 #092c58,
+        -2px -2px 0 #092c58,
+        0 4px 8px rgba(9, 44, 88, 0.45);
+    }
+
+    .sub-ribbon {
+      margin-top: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(180deg, #fffdf4 0%, #f7e6b5 100%);
+      border: 2px solid #c99e48;
+      border-radius: 999px;
+      padding: 3px 16px;
+      box-shadow: 0 2px 6px rgba(105, 72, 12, 0.2);
+      color: #0b2e59;
+      font-weight: 800;
+      font-size: clamp(0.82rem, 1.35vw, 1.08rem);
+    }
+
+    /* Cụm điều khiển âm thanh & trợ giúp góc trên phải */
+    .top-controls {
+      position: absolute;
+      top: 6px;
+      right: 10px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(4px);
+      padding: 3px 6px;
+      border-radius: 999px;
+      border: 1.5px solid #93c5fd;
+      box-shadow: 0 2px 6px rgba(9, 44, 88, 0.18);
+    }
+
+    .sound-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: linear-gradient(180deg, #1d7dfa 0%, #0b53c1 100%);
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 0.82rem;
+      padding: 5px 11px;
+      border-radius: 999px;
+      border: 1.5px solid #ffffff;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(11, 83, 193, 0.35);
+      transition: transform 0.12s ease, filter 0.12s ease;
+    }
+
+    .sound-btn:hover {
+      filter: brightness(1.07);
+    }
+
+    .sound-btn:active {
+      transform: scale(0.96);
+    }
+
+    .sound-btn.muted {
+      background: linear-gradient(180deg, #64748b 0%, #475569 100%);
+    }
+
+    .vol-slider {
+      width: 58px;
+      height: 6px;
+      accent-color: #1d7dfa;
+      cursor: pointer;
+    }
+
+    .help-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #fef08a 0%, #f59e0b 100%);
+      color: #092c58;
+      font-weight: 900;
+      font-size: 0.85rem;
+      border: 1.5px solid #ffffff;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .audio-hint-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #b45309;
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      padding: 2px 7px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    /* Lời nhắc xoay ngang trên điện thoại dọc */
+    .portrait-notice {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: #e0f2fe;
+      border: 1px solid #7dd3fc;
+      color: #0369a1;
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    /* ==========================================================================
+       3. BỐ CỤC 3 KHU VỰC CHÍNH (MÁY TÍNH & ĐIỆN THOẠI NGANG / DỌC)
+       ========================================================================== */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 43fr 31fr 26fr;
+      gap: 10px;
+      flex: 1;
+      min-height: 0;
+      align-items: stretch;
+    }
+
+    .sim-card {
+      background: var(--card-bg);
+      border: 2.5px solid var(--card-border);
+      border-radius: 18px;
+      box-shadow: var(--card-shadow);
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .section-pill-header {
+      background: linear-gradient(180deg, #154580 0%, #09264a 100%);
+      color: #ffffff;
+      border-radius: 999px;
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-weight: 800;
+      font-size: clamp(0.88rem, 1.25vw, 1.08rem);
+      letter-spacing: 0.02em;
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.28), 0 2px 5px rgba(9, 38, 74, 0.25);
+      margin-bottom: 8px;
+      flex-shrink: 0;
+    }
+
+    /* ==========================================================================
+       4. KHU VỰC TRÁI: 4 CỘT KHÍ, Ô PHÓNG ĐẠI & THANH BỔ SUNG
+       ========================================================================== */
+    .sub-instruction-banner {
+      background: #e3f5ff;
+      border: 1.5px solid #9bd7f8;
+      border-radius: 11px;
+      padding: 5px 10px;
+      text-align: center;
+      margin-bottom: 8px;
+      flex-shrink: 0;
+    }
+
+    .sub-instruction-title {
+      font-weight: 800;
+      font-size: clamp(0.82rem, 1.1vw, 0.96rem);
+      color: #082f5e;
+      line-height: 1.2;
+    }
+
+    .sub-instruction-hint {
+      font-size: clamp(0.75rem, 0.98vw, 0.85rem);
+      color: #1e40af;
+      font-weight: 600;
+      margin-top: 1px;
+    }
+
+    /* 4 cột khí LUÔN CÙNG MỘT HÀNG NGANG */
+    .columns-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+      align-items: start;
+      padding: 2px 0;
+      flex: 1;
+      min-height: 185px;
+    }
+
+    .gas-col-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      user-select: none;
+      -webkit-user-select: none;
+      height: 100%;
+    }
+
+    .gas-value-readout {
+      font-weight: 900;
+      font-size: clamp(0.86rem, 1.2vw, 1.1rem);
+      line-height: 1.2;
+      margin-bottom: 4px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    /* Khung tương tác chứa thang đo + ống trụ */
+    .cylinder-interactive-zone {
+      position: relative;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      width: 100%;
+      flex: 1;
+      min-height: 132px;
+      max-height: 190px;
+      padding: 8px 4px;
+      border-radius: 12px;
+      border: 2px solid transparent;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .cylinder-interactive-zone.adjustable {
+      cursor: ns-resize;
+      touch-action: none; /* Chỉ khóa cuộn trên vùng kéo cột */
+    }
+
+    .cylinder-interactive-zone.adjustable:hover {
+      background-color: rgba(59, 130, 246, 0.05);
+      border-color: rgba(59, 130, 246, 0.35);
+    }
+
+    .cylinder-interactive-zone.adjustable:focus-visible,
+    .cylinder-interactive-zone.adjustable.dragging {
+      outline: none;
+      background-color: rgba(59, 130, 246, 0.1);
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    }
+
+    /* Thang chia 0 - 20 - 40 - 60 - 80 - 100 dùng chung hệ tọa độ với lòng cột */
+    .scale-axis {
+      position: relative;
+      width: 26px;
+      height: 100%;
+      margin-right: 3px;
+      flex-shrink: 0;
+      border-right: 1.5px solid #475569;
+    }
+
+    .scale-tick {
+      position: absolute;
+      right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      transform: translateY(50%);
+      width: 100%;
+      font-size: 0.69rem;
+      font-weight: 700;
+      color: #334155;
+      line-height: 1;
+      padding-right: 6px;
+    }
+
+    .scale-tick::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      width: 5px;
+      height: 1.5px;
+      background: #334155;
+    }
+
+    .scale-subtick {
+      position: absolute;
+      right: 0;
+      width: 3px;
+      height: 1px;
+      background: #94a3b8;
+      transform: translateY(50%);
+    }
+
+    /* Lòng cột chính xác 0-100% */
+    .cylinder-track-wrap {
+      position: relative;
+      width: clamp(32px, 4.2vw, 48px);
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Nắp trang trí nằm NGOÀI hệ tọa độ 0-100% để không làm lệch mức màu */
+    .cylinder-cap-top {
+      position: absolute;
+      top: -6px;
+      left: 0;
+      right: 0;
+      height: 6px;
+      border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+      background: linear-gradient(90deg, #cbd5e1 0%, #f8fafc 45%, #94a3b8 100%);
+      border: 1.5px solid #94a3b8;
+      border-bottom: none;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .cylinder-inner-body {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #dbeafe 0%, #ffffff 38%, #e2e8f0 78%, #cbd5e1 100%);
+      border-left: 1.5px solid #94a3b8;
+      border-right: 1.5px solid #94a3b8;
+      border-bottom: 2px solid #64748b;
+      border-top: 1px dashed rgba(100, 116, 139, 0.45);
+      overflow: hidden;
+      box-shadow: inset 0 0 8px rgba(15, 23, 42, 0.08);
+    }
+
+    /* Đường gióng ngang mờ ứng với 20, 40, 60, 80, 100 trong lòng cột */
+    .cylinder-grid-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: rgba(71, 85, 105, 0.22);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Phần màu biểu diễn đúng giá trị / 100 * chiều cao lòng cột */
+    .cylinder-fill {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 0%;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .cylinder-fill.n2 {
+      background: linear-gradient(90deg, #004ecc 0%, #2684ff 42%, #0052cc 100%);
+      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55);
+    }
+
+    .cylinder-fill.o2 {
+      background: linear-gradient(90deg, #118d17 0%, #2ce035 42%, #0f8014 100%);
+      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55);
+    }
+
+    .cylinder-fill.co2 {
+      background: linear-gradient(90deg, #c2410c 0%, #fb923c 42%, #ea580c 100%);
+    }
+
+    .cylinder-fill.h2o {
+      background: linear-gradient(90deg, #0284c7 0%, #22d3ee 42%, #0891b2 100%);
+    }
+
+    /* Hiệu ứng bóng kính dọc thân trụ */
+    .cylinder-glass-shine {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 18%;
+      width: 16%;
+      background: linear-gradient(90deg, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.05) 100%);
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    /* Nhãn tên khí bên dưới cột */
+    .gas-name-pill {
+      margin-top: 5px;
+      padding: 4px 6px;
+      width: 100%;
+      min-height: 34px;
+      border-radius: 10px;
+      font-weight: 800;
+      font-size: clamp(0.74rem, 0.96vw, 0.88rem);
+      line-height: 1.12;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      word-break: break-word;
+    }
+
+    .gas-name-pill.n2 { background: #dbeafe; color: #0b3b8c; border: 1px solid #93c5fd; }
+    .gas-name-pill.o2 { background: #dcfce7; color: #14532d; border: 1px solid #86efac; }
+    .gas-name-pill.co2 { background: #ffedd5; color: #7c2d12; border: 1px solid #fdba74; }
+    .gas-name-pill.h2o { background: #cffafe; color: #164e63; border: 1px solid #67e8f9; }
+
+    .auto-balance-tag {
+      margin-top: 3px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #475569;
+      font-style: italic;
+    }
+
+    /* Dòng tổng thành phần */
+    .summary-bar {
+      margin: 6px 0;
+      padding: 5px 8px;
+      border-top: 1.5px solid #e2e8f0;
+      border-bottom: 1.5px solid #e2e8f0;
+      text-align: center;
+      background: #f8fafc;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    .summary-main-text {
+      font-size: clamp(0.8rem, 1vw, 0.9rem);
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .summary-sub-text {
+      font-size: 0.73rem;
+      color: #475569;
+      font-weight: 600;
+    }
+
+    /* Ô phóng đại hàm lượng nhỏ */
+    .magnify-section {
+      margin-bottom: 6px;
+      flex-shrink: 0;
+    }
+
+    .magnify-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 800;
+      font-size: clamp(0.78rem, 1vw, 0.9rem);
+      color: #092c58;
+      margin-bottom: 4px;
+    }
+
+    .magnify-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .magnify-card {
+      padding: 6px 9px;
+      border-radius: 11px;
+    }
+
+    .magnify-card.co2 {
+      background: #fff7ed;
+      border: 1.5px solid #fdba74;
+    }
+
+    .magnify-card.h2o {
+      background: #ecfeff;
+      border: 1.5px solid #67e8f9;
+    }
+
+    .magnify-card-top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 4px;
+      font-weight: 800;
+      font-size: clamp(0.76rem, 0.95vw, 0.88rem);
+      margin-bottom: 4px;
+    }
+
+    .magnify-bar-track {
+      width: 100%;
+      height: 11px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid #cbd5e1;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .magnify-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.06s linear;
+    }
+
+    .magnify-bar-fill.co2 {
+      background: linear-gradient(90deg, #ea580c 0%, #fb923c 100%);
+    }
+
+    .magnify-bar-fill.h2o {
+      background: linear-gradient(90deg, #0284c7 0%, #06b6d4 100%);
+    }
+
+    .magnify-scale-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #475569;
+      margin-top: 2px;
+    }
+
+    .magnify-note {
+      text-align: center;
+      font-size: 0.73rem;
+      font-style: italic;
+      color: #475569;
+      margin-top: 3px;
+      font-weight: 600;
+    }
+
+    /* Thanh trượt Khí độc hại & Khói, bụi */
+    .pollutant-box {
+      background: #f1f5f9;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 7px 10px;
+      flex-shrink: 0;
+    }
+
+    .pollutant-row {
+      display: grid;
+      grid-template-columns: 118px 1fr 82px;
+      align-items: center;
+      gap: 8px;
+      padding: 3px 0;
+    }
+
+    .pollutant-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 800;
+      font-size: clamp(0.78rem, 0.95vw, 0.88rem);
+      color: #0f172a;
+    }
+
+    .pollutant-slider {
+      width: 100%;
+      height: 24px;
+      cursor: pointer;
+      touch-action: none;
+    }
+
+    .pollutant-slider.toxic {
+      accent-color: #7e22ce;
+    }
+
+    .pollutant-slider.smoke {
+      accent-color: #475569;
+    }
+
+    .pollutant-level-text {
+      text-align: right;
+      font-weight: 800;
+      font-size: clamp(0.76rem, 0.92vw, 0.86rem);
+      color: #0f172a;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .pollutant-note {
+      text-align: center;
+      font-size: 0.73rem;
+      font-style: italic;
+      color: #475569;
+      margin-top: 2px;
+      font-weight: 600;
+    }
+
+    /* ==========================================================================
+       5. KHU VỰC GIỮA: KÍNH LÚP & CHÚ GIẢI HẠT
+       ========================================================================== */
+    .magnifier-stage {
+      position: relative;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 210px;
+      padding: 4px 12px 14px 4px;
+    }
+
+    .magnifier-frame {
+      position: relative;
+      width: clamp(195px, 21vw, 290px);
+      aspect-ratio: 1 / 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Tay cầm kính lúp nghiêng xuống góc phải dưới nhưng không che chú giải */
+    .magnifier-handle {
+      position: absolute;
+      width: 34%;
+      height: 15%;
+      bottom: 2%;
+      right: -13%;
+      transform: rotate(38deg);
+      transform-origin: left center;
+      border-radius: 6px 18px 18px 6px;
+      background: linear-gradient(180deg, #334155 0%, #0f172a 55%, #1e293b 100%);
+      border: 2px solid #091526;
+      box-shadow: 2px 4px 8px rgba(0, 0, 0, 0.28);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .magnifier-handle::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: -2px;
+      bottom: -2px;
+      width: 24%;
+      background: linear-gradient(180deg, #fde047 0%, #ca8a04 60%, #854d0e 100%);
+      border-right: 2px solid #713f12;
+      border-radius: 3px 0 0 3px;
+    }
+
+    .magnifier-rim {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      padding: 11px;
+      background: linear-gradient(135deg, #3b5998 0%, #0d254c 48%, #1e3a8a 85%, #091936 100%);
+      box-shadow:
+        0 8px 18px rgba(9, 30, 66, 0.28),
+        inset 0 2px 4px rgba(255, 255, 255, 0.35),
+        inset 0 -3px 6px rgba(0, 0, 0, 0.5);
+      z-index: 2;
+    }
+
+    .magnifier-lens {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #f0f9ff 0%, #dff2fe 65%, #bae6fd 100%);
+      border: 3px solid #7dd3fc;
+      overflow: hidden;
+      box-shadow: inset 0 6px 16px rgba(2, 132, 199, 0.18);
+    }
+
+    #particleCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .lens-gloss {
+      position: absolute;
+      top: 5%;
+      left: 10%;
+      width: 45%;
+      height: 22%;
+      border-radius: 50%;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0) 100%);
+      transform: rotate(-18deg);
+      pointer-events: none;
+    }
+
+    /* Hộp chú giải hạt */
+    .legend-box {
+      background: #fff9eb;
+      border: 1.5px solid #e5c687;
+      border-radius: 13px;
+      padding: 8px 10px;
+      flex-shrink: 0;
+    }
+
+    .legend-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 10px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: clamp(0.76rem, 0.95vw, 0.86rem);
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .legend-icon-svg {
+      width: 36px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .legend-note {
+      text-align: center;
+      font-size: 0.73rem;
+      font-style: italic;
+      color: #475569;
+      margin-top: 5px;
+      font-weight: 600;
+    }
+
+    /* ==========================================================================
+       6. KHU VỰC PHẢI: CHUÔNG, TRÁI ĐẤT BIỂU CẢM & KHUNG TRẠNG THÁI
+       ========================================================================== */
+    .status-stage {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      padding: 4px 0;
+    }
+
+    .bell-wrapper {
+      height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* Hiệu ứng rung chuông CHỈ khi cảnh báo đỏ đang kích hoạt */
+    @keyframes bellRingShake {
+      0%, 100% { transform: rotate(0deg); }
+      15% { transform: rotate(16deg); }
+      30% { transform: rotate(-16deg); }
+      45% { transform: rotate(12deg); }
+      60% { transform: rotate(-12deg); }
+      75% { transform: rotate(7deg); }
+      90% { transform: rotate(-7deg); }
+    }
+
+    .bell-svg.ringing {
+      animation: bellRingShake 0.45s ease-in-out infinite;
+      transform-origin: 50% 14%;
+    }
+
+    .earth-wrapper {
+      width: clamp(142px, 15vw, 205px);
+      aspect-ratio: 1 / 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      flex-shrink: 1;
+      min-height: 110px;
+    }
+
+    .status-banner-box {
+      width: 100%;
+      border-radius: 15px;
+      padding: 9px 12px;
+      border: 2.5px solid #16a34a;
+      background: #f0fdf4;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 4px;
+      transition: background-color 0.2s ease, border-color 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .status-banner-box.state-green {
+      border-color: #16a34a;
+      background: linear-gradient(180deg, #f0fdf4 0%, #dcfce7 100%);
+      color: #14532d;
+    }
+
+    .status-banner-box.state-red {
+      border-color: #dc2626;
+      background: linear-gradient(180deg, #fef2f2 0%, #fee2e2 100%);
+      color: #7f1d1d;
+    }
+
+    .status-banner-box.state-neutral {
+      border-color: #0284c7;
+      background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%);
+      color: #0c4a6e;
+    }
+
+    .status-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-weight: 900;
+      font-size: clamp(0.95rem, 1.35vw, 1.2rem);
+      line-height: 1.2;
+    }
+
+    /* Danh sách các thay đổi cảnh báo ngay dưới dòng KHÔNG KHÍ BỊ Ô NHIỄM */
+    .status-changes-wrap {
+      display: none;
+      width: 100%;
+      background: #fff5f5;
+      border: 1.5px solid #fca5a5;
+      border-radius: 10px;
+      padding: 6px 10px;
+      margin-top: 2px;
+      text-align: left;
+      color: #7f1d1d;
+    }
+
+    .status-changes-wrap.active {
+      display: block;
+    }
+
+    .status-changes-heading {
+      font-size: clamp(0.78rem, 0.96vw, 0.88rem);
+      font-weight: 800;
+      color: #651a1a;
+      margin-bottom: 3px;
+      line-height: 1.25;
+    }
+
+    .status-changes-list {
+      margin: 0;
+      padding-left: 18px;
+      list-style-type: disc;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .status-changes-list li {
+      font-size: clamp(0.8rem, 0.98vw, 0.9rem);
+      font-weight: 700;
+      color: #7f1d1d;
+      line-height: 1.32;
+      word-break: normal;
+      overflow-wrap: break-word;
+    }
+
+    .status-sub-row {
+      font-size: 0.75rem;
+      font-style: italic;
+      font-weight: 600;
+      opacity: 0.9;
+    }
+
+    /* ==========================================================================
+       7. THANH CUỐI TRANG: NÚT SO SÁNH, ĐẶT LẠI & GHI CHÚ MÔ PHỎNG
+       ========================================================================== */
+    .bottom-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 4px 8px;
+      flex-shrink: 0;
+    }
+
+    .action-buttons-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-width: 148px;
+      padding: 9px 22px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: clamp(0.92rem, 1.15vw, 1.05rem);
+      color: #ffffff;
+      cursor: pointer;
+      transition: transform 0.12s ease, filter 0.12s ease;
+    }
+
+    .btn-action:hover {
+      filter: brightness(1.06);
+    }
+
+    .btn-action:active {
+      transform: scale(0.97);
+    }
+
+    .btn-compare {
+      background: linear-gradient(180deg, #fb923c 0%, #ea580c 55%, #c2410c 100%);
+      border: 2px solid #9a3412;
+      box-shadow: 0 3px 8px rgba(194, 65, 12, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.45);
+    }
+
+    .btn-reset {
+      background: linear-gradient(180deg, #38bdf8 0%, #0284c7 55%, #0369a1 100%);
+      border: 2px solid #075985;
+      box-shadow: 0 3px 8px rgba(2, 132, 199, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.45);
+    }
+
+    .disclaimer-text {
+      font-size: clamp(0.76rem, 0.95vw, 0.86rem);
+      font-style: italic;
+      font-weight: 700;
+      color: #334155;
+      padding-left: 10px;
+      border-left: 2px solid #cbd5e1;
+    }
+
+    /* ==========================================================================
+       8. HỘP THOẠI SO SÁNH & HỘP THOẠI TRỢ GIÚP (MODALS)
+       ========================================================================== */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(9, 30, 66, 0.58);
+      backdrop-filter: blur(3px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-dialog {
+      background: #fffdf9;
+      border: 3px solid #d4af6a;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 720px;
+      max-height: 90vh;
+      max-height: 90dvh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 16px 40px rgba(9, 30, 66, 0.38);
+      overflow: hidden;
+    }
+
+    .modal-header {
+      background: linear-gradient(180deg, #154580 0%, #09264a 100%);
+      color: #ffffff;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .modal-title {
+      margin: 0;
+      font-size: clamp(1rem, 1.5vw, 1.25rem);
+      font-weight: 900;
+      letter-spacing: 0.02em;
+    }
+
+    .modal-close-btn {
+      background: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+      border: 1.5px solid rgba(255, 255, 255, 0.45);
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-weight: 800;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .modal-close-btn:hover {
+      background: rgba(255, 255, 255, 0.28);
+    }
+
+    .modal-body {
+      padding: 14px 18px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .compare-section-box {
+      background: #ffffff;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+
+    .compare-sec-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 8px;
+      border-bottom: 1.5px solid #f1f5f9;
+      padding-bottom: 4px;
+    }
+
+    .compare-sec-title {
+      font-weight: 900;
+      font-size: 0.98rem;
+      color: #092c58;
+    }
+
+    .compare-sec-unit {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #0369a1;
+      background: #e0f2fe;
+      padding: 2px 9px;
+      border-radius: 999px;
+    }
+
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    .compare-table th {
+      text-align: left;
+      padding: 7px 8px;
+      background: #f8fafc;
+      color: #334155;
+      font-weight: 800;
+      border-bottom: 2px solid #cbd5e1;
+    }
+
+    .compare-table th.num-col,
+    .compare-table td.num-col {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .compare-table th.status-col,
+    .compare-table td.status-col {
+      text-align: center;
+    }
+
+    .compare-table td {
+      padding: 7px 8px;
+      border-bottom: 1px solid #e2e8f0;
+      font-weight: 700;
+    }
+
+    .change-badge {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
+    .change-same { background: #f1f5f9; color: #475569; }
+    .change-up { background: #ffedd5; color: #c2410c; }
+    .change-down { background: #dbeafe; color: #1d4ed8; }
+    .change-appear { background: #f3e8ff; color: #7e22ce; }
+
+    .compare-question-box {
+      background: #fef9c3;
+      border: 2px solid #facc15;
+      border-radius: 12px;
+      padding: 10px 14px;
+      text-align: center;
+      font-weight: 800;
+      font-size: 0.98rem;
+      color: #713f12;
+    }
+
+    /* ==========================================================================
+       9. RESPONSIVE CHO MÁY TÍNH THẤP, ĐIỆN THOẠI DỌC VÀ ĐIỆN THOẠI NGANG
+       ========================================================================== */
+
+    /* Khi màn hình máy tính có chiều cao hạn chế (ví dụ 1366x768) */
+    @media (min-width: 900px) and (max-height: 800px) {
+      .app-shell { gap: 5px; padding-top: 4px; padding-bottom: 4px; }
+      .top-banner { min-height: 82px; padding: 4px 12px; }
+      .banner-left-char svg { height: 74px; width: auto; }
+      .banner-right-char svg { height: 72px; width: auto; }
+      .main-title { font-size: 1.48rem; }
+      .sub-ribbon { margin-top: 3px; padding: 2px 12px; font-size: 0.85rem; }
+      .sim-card { padding: 7px 10px; }
+      .section-pill-header { padding: 4px 10px; margin-bottom: 5px; font-size: 0.9rem; }
+      .sub-instruction-banner { padding: 3px 8px; margin-bottom: 5px; }
+      .columns-row { min-height: 145px; }
+      .cylinder-interactive-zone { min-height: 112px; max-height: 140px; padding: 5px 2px; }
+      .magnifier-stage { min-height: 170px; padding: 2px; }
+      .magnifier-frame { width: clamp(165px, 17vw, 215px); }
+      .earth-wrapper { width: clamp(118px, 12.5vw, 155px); min-height: 96px; }
+      .bell-wrapper { height: 46px; }
+      .bell-wrapper svg { height: 44px; width: auto; }
+      .status-banner-box { padding: 7px 10px; gap: 3px; }
+      .status-changes-wrap { padding: 5px 8px; }
+      .status-changes-heading { font-size: 0.76rem; margin-bottom: 2px; }
+      .status-changes-list li { font-size: 0.78rem; line-height: 1.25; }
+      .btn-action { padding: 6px 18px; font-size: 0.9rem; }
+    }
+
+    /* Điện thoại dọc & máy tính bảng dọc (Chiều rộng hẹp, hướng dọc) */
+    @media (max-width: 899px) and (orientation: portrait) {
+      .portrait-notice { display: flex; }
+      .main-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .top-banner {
+        flex-direction: column;
+        min-height: auto;
+        padding: 38px 10px 8px 10px;
+        gap: 4px;
+      }
+      .banner-left-char svg { height: 64px; width: auto; }
+      .banner-right-char { display: none; }
+      .columns-row {
+        grid-template-columns: repeat(4, minmax(0, 1fr)); /* Giữ 4 cột cùng 1 hàng ngang */
+        gap: 4px;
+        min-height: 175px;
+      }
+      .scale-axis { width: 22px; margin-right: 2px; }
+      .scale-tick { font-size: 0.62rem; padding-right: 4px; }
+      .cylinder-track-wrap { width: 28px; }
+      .pollutant-row {
+        grid-template-columns: 106px 1fr 74px;
+        gap: 6px;
+      }
+      .magnifier-frame { width: min(240px, 68vw); }
+      .disclaimer-text {
+        border-left: none;
+        padding-left: 0;
+        text-align: center;
+        width: 100%;
+      }
+    }
+
+    /* Điện thoại ngang (Chiều cao thấp <= 540px và xoay ngang):
+       Tự động xếp 3 khu vực cạnh nhau như laptop, thu gọn đầu trang */
+    @media (orientation: landscape) and (max-height: 540px) {
+      .app-shell {
+        gap: 4px;
+        padding: 4px max(8px, env(safe-area-inset-right)) 4px max(8px, env(safe-area-inset-left));
+      }
+      .top-banner {
+        min-height: 48px;
+        padding: 3px 10px;
+        border-radius: 10px;
+      }
+      .banner-left-char svg { height: 42px; width: auto; }
+      .banner-right-char { display: none; }
+      .banner-center-titles {
+        flex-direction: row;
+        gap: 8px;
+        justify-content: flex-start;
+      }
+      .main-title { font-size: 1.02rem; }
+      .sub-ribbon { margin-top: 0; padding: 1px 8px; font-size: 0.72rem; }
+      .audio-hint-badge { display: none; }
+      .main-grid {
+        grid-template-columns: 45fr 30fr 25fr;
+        gap: 6px;
+      }
+      .sim-card {
+        padding: 5px 7px;
+        border-radius: 12px;
+      }
+      .section-pill-header {
+        padding: 3px 8px;
+        font-size: 0.76rem;
+        margin-bottom: 4px;
+      }
+      .sub-instruction-banner {
+        padding: 2px 6px;
+        margin-bottom: 4px;
+      }
+      .sub-instruction-title { font-size: 0.72rem; }
+      .sub-instruction-hint { font-size: 0.66rem; }
+      .columns-row { min-height: 105px; gap: 3px; }
+      .cylinder-interactive-zone { min-height: 82px; max-height: 105px; padding: 4px 1px; }
+      .scale-axis { width: 20px; margin-right: 1px; }
+      .scale-tick { font-size: 0.58rem; padding-right: 3px; }
+      .cylinder-track-wrap { width: 22px; }
+      .gas-value-readout { font-size: 0.74rem; margin-bottom: 2px; }
+      .gas-name-pill { min-height: 24px; font-size: 0.65rem; padding: 2px 3px; margin-top: 3px; }
+      .auto-balance-tag { font-size: 0.6rem; }
+      .summary-bar { margin: 3px 0; padding: 2px 4px; }
+      .summary-main-text { font-size: 0.7rem; }
+      .summary-sub-text { display: none; }
+      .magnify-header { font-size: 0.7rem; margin-bottom: 2px; }
+      .magnify-card { padding: 3px 6px; }
+      .magnify-card-top { font-size: 0.68rem; margin-bottom: 2px; }
+      .magnify-bar-track { height: 7px; }
+      .magnify-scale-labels, .magnify-note, .pollutant-note { font-size: 0.6rem; }
+      .pollutant-box { padding: 4px 6px; }
+      .pollutant-row { grid-template-columns: 88px 1fr 64px; gap: 4px; padding: 1px 0; }
+      .pollutant-label, .pollutant-level-text { font-size: 0.68rem; }
+      .pollutant-slider { height: 18px; }
+      .magnifier-stage { min-height: 115px; padding: 2px; }
+      .magnifier-frame { width: clamp(115px, 18vw, 155px); }
+      .magnifier-handle { width: 24%; right: -8%; }
+      .legend-box { padding: 4px 6px; }
+      .legend-grid { gap: 3px 6px; }
+      .legend-item { font-size: 0.66rem; gap: 4px; }
+      .legend-icon-svg { width: 24px; height: 16px; }
+      .legend-note { font-size: 0.6rem; margin-top: 2px; }
+      .bell-wrapper { height: 32px; }
+      .bell-wrapper svg { height: 30px; width: auto; }
+      .earth-wrapper { width: clamp(76px, 11vw, 108px); min-height: 72px; }
+      .status-banner-box { padding: 5px 7px; border-radius: 10px; gap: 2px; }
+      .status-title-row { font-size: 0.78rem; }
+      .status-changes-wrap { padding: 4px 7px; margin-top: 1px; }
+      .status-changes-heading { font-size: 0.72rem; margin-bottom: 1px; }
+      .status-changes-list { padding-left: 15px; gap: 1px; }
+      .status-changes-list li { font-size: 0.74rem; line-height: 1.24; }
+      .status-sub-row { font-size: 0.62rem; }
+      .bottom-bar { padding: 2px 4px; gap: 8px; }
+      .btn-action { min-width: 110px; padding: 5px 12px; font-size: 0.78rem; }
+      .disclaimer-text { font-size: 0.68rem; }
+    }
+
+    /* Hộp thoại So sánh tự động chuyển sang dạng thẻ gọn nếu màn hình rất hẹp */
+    @media (max-width: 480px) {
+      .compare-table th, .compare-table td {
+        padding: 5px 4px;
+        font-size: 0.8rem;
+      }
+      .magnify-grid {
+        grid-template-columns: 1fr;
+        gap: 5px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- ======================================================================
+         ĐẦU TRANG: THÀNH PHỐ AN LÀNH, CONAN & ĐỘI THÁM TỬ NHÍ, ÂM THANH
+         ====================================================================== -->
+    <header class="top-banner">
+      <!-- Bối cảnh thành phố An Lành bằng SVG -->
+      <svg class="city-bg-svg" viewBox="0 0 1400 140" preserveAspectRatio="none" aria-hidden="true">
+        <!-- Mây trắng -->
+        <g fill="#ffffff" opacity="0.78">
+          <ellipse cx="210" cy="34" rx="55" ry="18" />
+          <ellipse cx="245" cy="28" rx="40" ry="20" />
+          <ellipse cx="640" cy="24" rx="70" ry="16" />
+          <ellipse cx="1060" cy="30" rx="60" ry="18" />
+          <ellipse cx="1100" cy="25" rx="42" ry="16" />
+        </g>
+        <!-- Nhà cao tầng phía xa -->
+        <g fill="#a3ccf2" opacity="0.7">
+          <rect x="20" y="38" width="46" height="90" rx="2" />
+          <rect x="74" y="52" width="38" height="76" rx="2" />
+          <rect x="260" y="45" width="52" height="83" rx="2" />
+          <rect x="320" y="60" width="44" height="68" rx="2" />
+          <rect x="980" y="48" width="50" height="80" rx="2" />
+          <rect x="1040" y="32" width="58" height="96" rx="2" />
+          <rect x="1290" y="42" width="48" height="86" rx="2" />
+        </g>
+        <!-- Nhà gần và hàng cây xanh -->
+        <g fill="#d9ecff" stroke="#7fb3e6" stroke-width="1">
+          <rect x="195" y="58" width="56" height="70" rx="3" />
+          <rect x="375" y="66" width="62" height="62" rx="3" />
+          <rect x="915" y="64" width="58" height="64" rx="3" />
+          <rect x="1115" y="54" width="54" height="74" rx="3" />
+        </g>
+        <!-- Đồi cỏ & vòm cây xanh -->
+        <path d="M0,115 Q350,96 700,114 T1400,110 L1400,140 L0,140 Z" fill="#8bd474" />
+        <g fill="#68be52">
+          <circle cx="30" cy="115" r="22" />
+          <circle cx="65" cy="118" r="18" />
+          <circle cx="255" cy="116" r="20" />
+          <circle cx="360" cy="118" r="19" />
+          <circle cx="965" cy="117" r="21" />
+          <circle cx="1010" cy="116" r="18" />
+          <circle cx="1365" cy="116" r="24" />
+        </g>
+      </svg>
+
+      <!-- Nhân vật trái: Conan cầm sổ ghi chép -->
+      <div class="banner-left-char" aria-hidden="true">
+        <svg width="138" height="100" viewBox="0 0 150 110">
+          <!-- Áo vest xanh & nơ đỏ -->
+          <path d="M32,108 L42,68 Q70,62 98,68 L108,108 Z" fill="#1e40af" stroke="#0f172a" stroke-width="2" />
+          <polygon points="58,68 70,92 82,68" fill="#ffffff" />
+          <!-- Nơ đỏ biến đổi giọng nói -->
+          <polygon points="56,70 68,75 56,81" fill="#ef4444" stroke="#7f1d1d" stroke-width="1.2" />
+          <polygon points="84,70 72,75 84,81" fill="#ef4444" stroke="#7f1d1d" stroke-width="1.2" />
+          <circle cx="70" cy="75.5" r="3.2" fill="#dc2626" />
+          <!-- Khuôn mặt & Tóc Conan -->
+          <ellipse cx="70" cy="43" rx="25" ry="23" fill="#fde6d2" stroke="#5c3a21" stroke-width="1.8" />
+          <path d="M42,42 C38,18 58,6 76,8 C94,10 105,24 98,44 C95,30 88,24 80,31 C74,22 65,24 60,33 C53,24 46,30 42,42 Z" fill="#3b2314" stroke="#1c1008" stroke-width="1.5" />
+          <!-- Chỏm tóc đặc trưng -->
+          <path d="M68,8 Q75,-3 84,4 Q76,7 74,11 Z" fill="#3b2314" />
+          <!-- Kính cận lớn đặc trưng -->
+          <g stroke="#1e293b" stroke-width="2.4" fill="rgba(255,255,255,0.45)">
+            <rect x="46" y="34" width="21" height="15" rx="4" />
+            <rect x="73" y="34" width="21" height="15" rx="4" />
+            <line x1="67" y1="41" x2="73" y2="41" />
+          </g>
+          <!-- Mắt & Nụ cười tự tin -->
+          <ellipse cx="57" cy="41.5" rx="2.8" ry="3.8" fill="#0f172a" />
+          <ellipse cx="83" cy="41.5" rx="2.8" ry="3.8" fill="#0f172a" />
+          <circle cx="56" cy="40" r="1.1" fill="#ffffff" />
+          <circle cx="82" cy="40" r="1.1" fill="#ffffff" />
+          <path d="M64,54 Q70,58 77,54" fill="none" stroke="#5c3a21" stroke-width="2" stroke-linecap="round" />
+          <!-- Sổ tay Conan & Bút -->
+          <g transform="translate(88, 60) rotate(-10)">
+            <rect x="0" y="0" width="34" height="42" rx="3" fill="#7c2d12" stroke="#431407" stroke-width="1.8" />
+            <rect x="4" y="3" width="27" height="36" rx="2" fill="#fef3c7" />
+            <text x="8" y="24" font-size="7.5" font-weight="bold" fill="#7c2d12">Conan</text>
+          </g>
+          <line x1="36" y1="74" x2="54" y2="86" stroke="#0284c7" stroke-width="3.5" stroke-linecap="round" />
+        </svg>
+      </div>
+
+      <!-- Tiêu đề trung tâm -->
+      <div class="banner-center-titles">
+        <h1 class="main-title">NHẬN DIỆN Ô NHIỄM KHÔNG KHÍ</h1>
+        <div class="sub-ribbon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="10.5" cy="10.5" r="6.5" fill="#bae6fd" stroke="#092c58" stroke-width="2.2" />
+            <line x1="15.5" y1="15.5" x2="21" y2="21" stroke="#092c58" stroke-width="3" stroke-linecap="round" />
+          </svg>
+          <span>Cùng Conan khám phá thành phố An Lành</span>
+        </div>
+      </div>
+
+      <!-- Nhân vật phải: Đội thám tử nhí (Ayumi, Mitsuhiko, Genta) & biển Thành phố An Lành -->
+      <div class="banner-right-char" aria-hidden="true">
+        <svg width="235" height="100" viewBox="0 0 250 110">
+          <!-- Ayumi -->
+          <g transform="translate(8, 22)">
+            <path d="M12,86 L20,54 Q34,50 48,54 L56,86 Z" fill="#f472b6" stroke="#831843" stroke-width="1.6" />
+            <circle cx="34" cy="34" r="17" fill="#fde6d2" stroke="#5c3a21" stroke-width="1.5" />
+            <path d="M15,34 C14,14 54,14 53,34 C50,22 20,22 15,34 Z" fill="#5c2d16" />
+            <rect x="20" y="15" width="10" height="4" rx="2" fill="#facc15" />
+            <circle cx="28" cy="34" r="2.2" fill="#0f172a" />
+            <circle cx="40" cy="34" r="2.2" fill="#0f172a" />
+            <path d="M29,41 Q34,46 39,41 Z" fill="#ef4444" />
+          </g>
+          <!-- Mitsuhiko -->
+          <g transform="translate(60, 18)">
+            <path d="M14,90 L22,56 Q36,52 50,56 L58,90 Z" fill="#38bdf8" stroke="#0c4a6e" stroke-width="1.6" />
+            <circle cx="36" cy="35" r="17" fill="#fde6d2" stroke="#5c3a21" stroke-width="1.5" />
+            <path d="M18,30 Q36,12 54,30 L50,22 Q36,14 22,22 Z" fill="#3b2314" />
+            <circle cx="30" cy="34" r="2" fill="#0f172a" />
+            <circle cx="42" cy="34" r="2" fill="#0f172a" />
+            <circle cx="33" cy="38" r="0.8" fill="#78350f" />
+            <circle cx="39" cy="38" r="0.8" fill="#78350f" />
+            <path d="M31,43 Q36,47 41,43" fill="none" stroke="#5c3a21" stroke-width="1.8" />
+          </g>
+          <!-- Genta -->
+          <g transform="translate(112, 8)">
+            <path d="M10,100 L20,58 Q46,52 72,58 L82,100 Z" fill="#ea580c" stroke="#7c2d12" stroke-width="1.8" />
+            <ellipse cx="46" cy="34" rx="22" ry="21" fill="#fde6d2" stroke="#5c3a21" stroke-width="1.6" />
+            <path d="M24,28 Q46,8 68,28 Z" fill="#27170c" />
+            <circle cx="38" cy="32" r="2.3" fill="#0f172a" />
+            <circle cx="54" cy="32" r="2.3" fill="#0f172a" />
+            <path d="M36,41 Q46,50 56,41 Z" fill="#dc2626" />
+          </g>
+          <!-- Biển THÀNH PHỐ AN LÀNH -->
+          <g transform="translate(186, 40) rotate(4)">
+            <rect x="24" y="42" width="6" height="32" fill="#78350f" />
+            <rect x="0" y="0" width="58" height="44" rx="7" fill="#ffffff" stroke="#3b82f6" stroke-width="2.5" />
+            <text x="29" y="18" font-size="8.2" font-weight="900" fill="#1e3a8a" text-anchor="middle">THÀNH PHỐ</text>
+            <text x="29" y="33" font-size="10.5" font-weight="900" fill="#0284c7" text-anchor="middle">AN LÀNH</text>
+          </g>
+        </svg>
+      </div>
+
+      <!-- Cụm nút Âm thanh & Trợ giúp -->
+      <div class="top-controls">
+        <span id="audioHintBadge" class="audio-hint-badge">Chạm loa để bật âm cảnh báo</span>
+        <button id="btnToggleSound" type="button" class="sound-btn muted" aria-pressed="false" title="Bật hoặc tắt âm cảnh báo">
+          <span id="soundIconWrap" aria-hidden="true">🔇</span>
+          <span id="soundBtnLabel">Bật âm</span>
+        </button>
+        <input
+          id="volumeSlider"
+          type="range"
+          min="0"
+          max="100"
+          step="5"
+          value="70"
+          class="vol-slider"
+          aria-label="Âm lượng cảnh báo"
+          title="Điều chỉnh âm lượng cảnh báo"
+        />
+        <button id="btnOpenHelp" type="button" class="help-btn" aria-label="Mở trợ giúp quy ước mô hình" title="Trợ giúp & Quy ước mô hình">?</button>
+      </div>
+    </header>
+
+    <!-- Lời nhắc nhỏ khi dùng điện thoại dọc (không bắt buộc xoay) -->
+    <div class="portrait-notice" role="status">
+      <span>📱 Xoay ngang điện thoại để quan sát thuận tiện hơn.</span>
+    </div>
+
+    <!-- ======================================================================
+         BỐ CỤC 3 KHU VỰC CHÍNH
+         ====================================================================== -->
+    <main class="main-grid">
+      <!-- ====================================================================
+           KHU VỰC 1 (TRÁI): ĐIỀU CHỈNH THÀNH PHẦN
+           ==================================================================== -->
+      <section class="sim-card" aria-labelledby="headingAdjust">
+        <div>
+          <div class="section-pill-header" id="headingAdjust">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="3.5" stroke="#facc15" stroke-width="2.2" />
+              <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1" stroke="#facc15" stroke-width="2.2" stroke-linecap="round" />
+            </svg>
+            <span>ĐIỀU CHỈNH THÀNH PHẦN</span>
+          </div>
+
+          <div class="sub-instruction-banner">
+            <div class="sub-instruction-title">THÀNH PHẦN KHÔNG KHÍ (% theo thể tích)</div>
+            <div class="sub-instruction-hint">Chạm vào cột, giữ và kéo lên/xuống.</div>
+          </div>
+        </div>
+
+        <!-- Bốn cột khí cùng một hàng ngang -->
+        <div class="columns-row" id="columnsRow">
+          <!-- Cột 1: Nitrogen (Tự cân bằng - khóa kéo trực tiếp) -->
+          <div class="gas-col-item">
+            <div id="valN2" class="gas-value-readout" style="color: var(--col-n2);">78,00%</div>
+            <div
+              class="cylinder-interactive-zone"
+              aria-label="Nitrogen: tự cân bằng"
+              title="Nitrogen tự cân bằng để tổng thành phần bằng 100%"
+            >
+              <div class="scale-axis" aria-hidden="true">
+                <div class="scale-tick" style="bottom: 100%;">100</div>
+                <div class="scale-subtick" style="bottom: 90%;"></div>
+                <div class="scale-tick" style="bottom: 80%;">80</div>
+                <div class="scale-subtick" style="bottom: 70%;"></div>
+                <div class="scale-tick" style="bottom: 60%;">60</div>
+                <div class="scale-subtick" style="bottom: 50%;"></div>
+                <div class="scale-tick" style="bottom: 40%;">40</div>
+                <div class="scale-subtick" style="bottom: 30%;"></div>
+                <div class="scale-tick" style="bottom: 20%;">20</div>
+                <div class="scale-subtick" style="bottom: 10%;"></div>
+                <div class="scale-tick" style="bottom: 0%;">0</div>
+              </div>
+              <div class="cylinder-track-wrap">
+                <div class="cylinder-cap-top"></div>
+                <div class="cylinder-inner-body">
+                  <div class="cylinder-grid-line" style="bottom: 80%;"></div>
+                  <div class="cylinder-grid-line" style="bottom: 60%;"></div>
+                  <div class="cylinder-grid-line" style="bottom: 40%;"></div>
+                  <div class="cylinder-grid-line" style="bottom: 20%;"></div>
+                  <div id="fillN2" class="cylinder-fill n2" style="height: 78%;"></div>
+                  <div class="cylinder-glass-shine"></div>
+                </div>
+              </div>
+            </div>
+            <div class="gas-name-pill n2">Nitrogen</div>
+            <div class="auto-balance-tag" title="Nitrogen được phần mềm điều chỉnh để tổng bằng 100%; đây là quy ước của mô hình.">
+              <span aria-hidden="true">🔒</span>
+              <span>Tự cân bằng</span>
+            </div>
+          </div>
+
+          <!-- Cột 2: Oxygen (18,00% – 23,00%, bước 0,10%) -->
+          <div class="gas-col-item">
+            <div id="valO2" class="gas-value-readout" style="color: var(--col-o2);">21,00%</div>
+            <div
+              id="colO2"
+              class="cylinder-interactive-zone adjustable"
+              role="slider"
+              tabindex="0"
+              aria-label="Điều chỉnh Oxygen (% theo thể tích)"
+              aria-valuemin="18.00"
+              aria-valuemax="23.00"
+              aria-valuenow="21.00"
+              aria-valuetext="21,00%"
+              data-gas="o2"
+            >
+              <div class="scale-axis" aria-hidden="true">
+                <div class="scale-tick" style="bottom: 100%;">100</div>
+                <div class="scale-subtick" style="bottom: 90%;"></div>
+                <div class="scale-tick" style="bottom: 80%;">80</div>
+                <div class="scale-subtick" style="bottom: 70%;"></div>
+                <div class="scale-tick" style="bottom: 60%;">60</div>
+                <div class="scale-subtick" style="bottom: 50%;"></div>
+                <div class="scale-tick" style="bottom: 40%;">40</div>
+                <div class="scale-subtick" style="bottom: 30%;"></div>
+                <div class="scale-tick" style="bottom: 20%;">20</div>
+                <div class="scale-subtick" style="bottom: 10%;"></div>
+                <div class="scale-tick" style="bottom: 0%;">0</div>
+              </div>
+              <div class="cylinder-track-wrap">
+                <div class="cylinder-cap-top"></div>
+                <div class="cylinder-inner-body">
+                  <div class="cylinder-grid-line" style="bottom: 80%;"></div>
+                  <div class="cylinder-grid-line" style="bottom: 60%;"></div>
+                  <div class="cylinder-grid-line" style="bottom: 40%;"></div>
+                  <div class="cylinder-grid-line" style="bottom: 20%;"></div>
+                  <div id="fillO2" class="cylinder-fill o2" style="height: 21%;"></div>
+                  <div class="cylinder-glass-shine"></div>
+                </div>
+              </div>
+            </div>
+            <div class="gas-name-pill o2">Oxygen</div>
+          </div>
+
+          <!-- Cột 3: Carbon dioxide (0,00% – 0,30%, bước 0,01%) -->
+          <div class="gas-col-item">
+            <div id="valCO2" class="gas-value-readout" style="color: var(--col-co2);">0,04%</div>
+            <div
+              id="colCO2"
+              class="cylinder-interactive-zone adjustable"
+              role="slider"
+              tabindex="0"
+              aria-label="Điều chỉnh Carbon dioxide (% theo thể tích)"
+              aria-valuemin="0.00"
+              aria-valuemax="0.30"
+              aria-valuenow="0.04"
+              aria-valuetext="0,04%"
+              data-gas="co2"
+            >
+              <div class="scale-axis" aria-hidden="true">
+                <div class="scale-tick" style="bottom: 100%;">100</div>
+                <div class="scale-subtick" style="bottom: 90%;"></div>
+                <div class="scale-tick" style="bottom: 80%;">80</div>
+                <div class="scale-subtick" style="bottom: 70%;"></div>
+                <div class="scale-tick" style="bottom: 60%;">60</div>
+                <div class="scale-subtick" style="bottom: 50%;"></div>
+                <div class="scale-tick" style="bottom: 40%;">40</div>
+                <div class="scale-subtick" style="bottom: 30%;"></div>
+                <div class="scale-tick" style="bottom: 20%;">20</div>
+                <div class="scale-subtick" style="bottom: 10%;"></div>
+                <div class="scale-tick" style="bottom: 0%;">0</div>
+              </div>
+              <div class="cylinder-track-wrap">
+                <div class="cylinder-cap-top"></div>
+                <div class="cylinder-inner-body">
+                  <div class="cylinder-grid-line" style="bottom: 80%;"></div>
+                  <div class="cylinder-grid-line" style="bottom: 60%;"></div>
+                  <div class="cylinder-grid-line" style="bottom: 40%;"></div>
+                  <div class="cylinder-grid-line" style="bottom: 20%;"></div>
+                  <div id="fillCO2" class="cylinder-fill co2" style="height: 0.04%;"></div>
+                  <div class="cylinder-glass-shine"></div>
+                </div>
+              </div>
+            </div>
+            <div class="gas-name-pill co2">Carbon<br />dioxide</div>
+          </div>
+
+          <!-- Cột 4: Hơi nước (0,00% – 0,50%, bước 0,05%) -->
+          <div class="gas-col-item">
+            <div id="valH2O" class="gas-value-readout" style="color: var(--col-h2o);">0,10%</div>
+            <div
+              id="colH2O"
+              class="cylinder-interactive-zone adjustable"
+              role="slider"
+              tabindex="0"
+              aria-label="Điều chỉnh Hơi nước (% theo thể tích)"
+              aria-valuemin="0.00"
+              aria-valuemax="0.50"
+              aria-valuenow="0.10"
+              aria-valuetext="0,10%"
+              data-gas="h2o"
+            >
+              <div class="scale-axis" aria-hidden="true">
+                <div class="scale-tick" style="bottom: 100%;">100</div>
+                <div class="scale-subtick" style="bottom: 90%;"></div>
+                <div class="scale-tick" style="bottom: 80%;">80</div>
+                <div class="scale-subtick" style="bottom: 70%;"></div>
+                <div class="scale-tick" style="bottom: 60%;">60</div>
+                <div class="scale-subtick" style="bottom: 50%;"></div>
+                <div class="scale-tick" style="bottom: 40%;">40</div>
+                <div class="scale-subtick" style="bottom: 30%;"></div>
+                <div class="scale-tick" style="bottom: 20%;">20</div>
+                <div class="scale-subtick" style="bottom: 10%;"></div>
+                <div class="scale-tick" style="bottom: 0%;">0</div>
+              </div>
+              <div class="cylinder-track-wrap">
+                <div class="cylinder-cap-top"></div>
+                <div class="cylinder-inner-body">
+                  <div class="cylinder-grid-line" style="bottom: 80%;"></div>
+                  <div class="cylinder-grid-line" style="bottom: 60%;"></div>
+                  <div class="cylinder-grid-line" style="bottom: 40%;"></div>
+                  <div class="cylinder-grid-line" style="bottom: 20%;"></div>
+                  <div id="fillH2O" class="cylinder-fill h2o" style="height: 0.10%;"></div>
+                  <div class="cylinder-glass-shine"></div>
+                </div>
+              </div>
+            </div>
+            <div class="gas-name-pill h2o">Hơi nước</div>
+          </div>
+        </div>
+
+        <!-- Dòng tổng thành phần -->
+        <div class="summary-bar">
+          <div class="summary-main-text">Các khí khác: 0,86% • Tổng: <span id="valTotal">100,00%</span></div>
+          <div class="summary-sub-text">Mẫu quy ước ban đầu; hơi nước trong thực tế thay đổi.</div>
+        </div>
+
+        <!-- Ô phóng đại hàm lượng nhỏ (Chỉ đọc, đồng bộ cột chính) -->
+        <div class="magnify-section">
+          <div class="magnify-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="10.5" cy="10.5" r="7" stroke="#092c58" stroke-width="2.2" />
+              <line x1="15.5" y1="15.5" x2="21" y2="21" stroke="#092c58" stroke-width="2.5" stroke-linecap="round" />
+            </svg>
+            <span>PHÓNG ĐẠI HÀM LƯỢNG NHỎ</span>
+          </div>
+
+          <div class="magnify-grid">
+            <!-- Ô đọc phụ Carbon dioxide: thang riêng 0 - 0,30% -->
+            <div class="magnify-card co2">
+              <div class="magnify-card-top" style="color: #9a3412;">
+                <span>Carbon dioxide</span>
+                <span id="magValCO2">0,04%</span>
+              </div>
+              <div class="magnify-bar-track" aria-hidden="true">
+                <div id="magBarCO2" class="magnify-bar-fill co2" style="width: 13.3333%;"></div>
+              </div>
+              <div class="magnify-scale-labels">
+                <span>0</span>
+                <span>0,30%</span>
+              </div>
+            </div>
+
+            <!-- Ô đọc phụ Hơi nước: thang riêng 0 - 0,50% -->
+            <div class="magnify-card h2o">
+              <div class="magnify-card-top" style="color: #155e75;">
+                <span>Hơi nước</span>
+                <span id="magValH2O">0,10%</span>
+              </div>
+              <div class="magnify-bar-track" aria-hidden="true">
+                <div id="magBarH2O" class="magnify-bar-fill h2o" style="width: 20%;"></div>
+              </div>
+              <div class="magnify-scale-labels">
+                <span>0</span>
+                <span>0,50%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="magnify-note">Ô phóng đại có thang riêng.</div>
+        </div>
+
+        <!-- Hai thanh trượt ngang: Khí độc hại & Khói, bụi -->
+        <div class="pollutant-box">
+          <!-- Khí độc hại -->
+          <div class="pollutant-row">
+            <label for="sliderToxic" class="pollutant-label">
+              <!-- Đám mây tím có đầu lâu trắng nhỏ giống ảnh -->
+              <svg width="28" height="22" viewBox="0 0 36 28" aria-hidden="true">
+                <path d="M9,24 C4,24 1,20.5 1,16.5 C1,13 3.8,10 7.5,9.5 C9,5 13.5,2 18.5,2 C24,2 28.5,5.5 29.8,10.2 C33,10.8 35,13.5 35,16.8 C35,20.8 31.8,24 27.5,24 Z" fill="#8b5cf6" stroke="#581c87" stroke-width="1.6" />
+                <circle cx="18" cy="12.5" r="4.5" fill="#ffffff" />
+                <rect x="15.5" y="15.5" width="5" height="3.2" rx="1" fill="#ffffff" />
+                <circle cx="16.4" cy="12.5" r="1.1" fill="#581c87" />
+                <circle cx="19.6" cy="12.5" r="1.1" fill="#581c87" />
+              </svg>
+              <span>Khí độc hại</span>
+            </label>
+            <input
+              id="sliderToxic"
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value="0"
+              class="pollutant-slider toxic"
+              aria-label="Mức bổ sung Khí độc hại (thang quy ước 0 đến 100)"
+            />
+            <div id="valToxic" class="pollutant-level-text">Mức: 0/100</div>
+          </div>
+
+          <!-- Khói, bụi -->
+          <div class="pollutant-row">
+            <label for="sliderSmoke" class="pollutant-label">
+              <!-- Đám khói xám giống ảnh -->
+              <svg width="28" height="22" viewBox="0 0 36 28" aria-hidden="true">
+                <path d="M9,24 C4,24 1,20.5 1,16.5 C1,13 3.8,10 7.5,9.5 C9,5 13.5,2 18.5,2 C24,2 28.5,5.5 29.8,10.2 C33,10.8 35,13.5 35,16.8 C35,20.8 31.8,24 27.5,24 Z" fill="#94a3b8" stroke="#334155" stroke-width="1.6" />
+                <circle cx="13" cy="15" r="4" fill="#cbd5e1" opacity="0.6" />
+                <circle cx="22" cy="14" r="5" fill="#64748b" opacity="0.5" />
+              </svg>
+              <span>Khói, bụi</span>
+            </label>
+            <input
+              id="sliderSmoke"
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value="0"
+              class="pollutant-slider smoke"
+              aria-label="Mức bổ sung Khói, bụi (thang quy ước 0 đến 100)"
+            />
+            <div id="valSmoke" class="pollutant-level-text">Mức: 0/100</div>
+          </div>
+
+          <div class="pollutant-note">Mức bổ sung quy ước — không phải % thể tích.</div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           KHU VỰC 2 (GIỮA): MẪU ĐANG KHẢO SÁT (KÍNH LÚP & CHÚ GIẢI)
+           ==================================================================== -->
+      <section class="sim-card" aria-labelledby="headingSample">
+        <div class="section-pill-header" id="headingSample">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="10.5" cy="10.5" r="6.5" fill="#7dd3fc" stroke="#ffffff" stroke-width="2.2" />
+            <line x1="15.5" y1="15.5" x2="21" y2="21" stroke="#facc15" stroke-width="3" stroke-linecap="round" />
+          </svg>
+          <span>MẪU ĐANG KHẢO SÁT</span>
+        </div>
+
+        <!-- Kính lúp lớn có tay cầm -->
+        <div class="magnifier-stage">
+          <div class="magnifier-frame">
+            <div class="magnifier-rim">
+              <div class="magnifier-lens" id="lensContainer">
+                <canvas id="particleCanvas" aria-label="Mô hình các hạt trong mẫu không khí đang chuyển động"></canvas>
+                <div class="lens-gloss"></div>
+              </div>
+            </div>
+            <div class="magnifier-handle" aria-hidden="true"></div>
+          </div>
+        </div>
+
+        <!-- Chú giải đầy đủ 6 loại hạt -->
+        <div class="legend-box">
+          <div class="legend-grid">
+            <!-- Nitrogen -->
+            <div class="legend-item">
+              <svg class="legend-icon-svg" viewBox="0 0 40 24" aria-hidden="true">
+                <circle cx="14" cy="12" r="7.5" fill="#0066ff" stroke="#003d99" stroke-width="1.2" />
+                <circle cx="26" cy="12" r="7.5" fill="#0066ff" stroke="#003d99" stroke-width="1.2" />
+                <circle cx="11.5" cy="9.5" r="2.2" fill="#93c5fd" />
+                <circle cx="23.5" cy="9.5" r="2.2" fill="#93c5fd" />
+              </svg>
+              <span>Nitrogen</span>
+            </div>
+
+            <!-- Hơi nước -->
+            <div class="legend-item">
+              <svg class="legend-icon-svg" viewBox="0 0 40 24" aria-hidden="true">
+                <circle cx="12" cy="16" r="5" fill="#f8fafc" stroke="#64748b" stroke-width="1.2" />
+                <circle cx="28" cy="16" r="5" fill="#f8fafc" stroke="#64748b" stroke-width="1.2" />
+                <circle cx="20" cy="10" r="6.8" fill="#06b6d4" stroke="#0e7490" stroke-width="1.2" />
+                <circle cx="18" cy="7.8" r="2" fill="#cffafe" />
+              </svg>
+              <span>Hơi nước</span>
+            </div>
+
+            <!-- Oxygen -->
+            <div class="legend-item">
+              <svg class="legend-icon-svg" viewBox="0 0 40 24" aria-hidden="true">
+                <circle cx="14" cy="12" r="7.5" fill="#16b31e" stroke="#14532d" stroke-width="1.2" />
+                <circle cx="26" cy="12" r="7.5" fill="#16b31e" stroke="#14532d" stroke-width="1.2" />
+                <circle cx="11.5" cy="9.5" r="2.2" fill="#86efac" />
+                <circle cx="23.5" cy="9.5" r="2.2" fill="#86efac" />
+              </svg>
+              <span>Oxygen</span>
+            </div>
+
+            <!-- Khí độc hại -->
+            <div class="legend-item">
+              <svg class="legend-icon-svg" viewBox="0 0 40 24" aria-hidden="true">
+                <path d="M10,21 C6,21 3.5,18 3.5,14.5 C3.5,11.5 6,9 9,8.5 C10.5,4.5 14.5,2 19,2 C24,2 28,5 29,9 C32,9.5 34.5,12 34.5,15 C34.5,18.5 31.5,21 28,21 Z" fill="#8b5cf6" stroke="#581c87" stroke-width="1.3" />
+                <circle cx="19" cy="11.5" r="3.8" fill="#ffffff" />
+                <rect x="17" y="14" width="4" height="2.6" rx="0.8" fill="#ffffff" />
+                <circle cx="17.7" cy="11.5" r="0.9" fill="#581c87" />
+                <circle cx="20.3" cy="11.5" r="0.9" fill="#581c87" />
+              </svg>
+              <span>Khí độc hại</span>
+            </div>
+
+            <!-- Carbon dioxide -->
+            <div class="legend-item">
+              <svg class="legend-icon-svg" viewBox="0 0 40 24" aria-hidden="true">
+                <circle cx="10" cy="12" r="6" fill="#f97316" stroke="#9a3412" stroke-width="1.2" />
+                <circle cx="20" cy="12" r="6.5" fill="#334155" stroke="#0f172a" stroke-width="1.2" />
+                <circle cx="30" cy="12" r="6" fill="#f97316" stroke="#9a3412" stroke-width="1.2" />
+              </svg>
+              <span>Carbon dioxide</span>
+            </div>
+
+            <!-- Khói, bụi -->
+            <div class="legend-item">
+              <svg class="legend-icon-svg" viewBox="0 0 40 24" aria-hidden="true">
+                <path d="M10,21 C6,21 3.5,18 3.5,14.5 C3.5,11.5 6,9 9,8.5 C10.5,4.5 14.5,2 19,2 C24,2 28,5 29,9 C32,9.5 34.5,12 34.5,15 C34.5,18.5 31.5,21 28,21 Z" fill="#94a3b8" stroke="#334155" stroke-width="1.3" />
+              </svg>
+              <span>Khói, bụi</span>
+            </div>
+          </div>
+          <div class="legend-note">Hạt minh họa; số lượng không theo đúng tỉ lệ.</div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           KHU VỰC 3 (PHẢI): TRẠNG THÁI MẪU (CHUÔNG & TRÁI ĐẤT BIỂU CẢM)
+           ==================================================================== -->
+      <section class="sim-card" aria-labelledby="headingStatus">
+        <div class="section-pill-header" id="headingStatus">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="4" y="13" width="4" height="7" rx="1" fill="#facc15" />
+            <rect x="10" y="9" width="4" height="11" rx="1" fill="#facc15" />
+            <rect x="16" y="4" width="4" height="16" rx="1" fill="#facc15" />
+          </svg>
+          <span>TRẠNG THÁI MẪU</span>
+        </div>
+
+        <div class="status-stage">
+          <!-- Chuông báo (Chỉ 1 chuông duy nhất hiển thị) -->
+          <div class="bell-wrapper">
+            <svg id="bellSvg" class="bell-svg" width="86" height="66" viewBox="0 0 100 76" aria-hidden="true">
+              <defs>
+                <linearGradient id="bellGradGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#86efac" />
+                  <stop offset="50%" stop-color="#22c55e" />
+                  <stop offset="100%" stop-color="#15803d" />
+                </linearGradient>
+                <linearGradient id="bellGradRed" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#fca5a5" />
+                  <stop offset="50%" stop-color="#ef4444" />
+                  <stop offset="100%" stop-color="#991b1b" />
+                </linearGradient>
+                <linearGradient id="bellGradNeutral" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#bae6fd" />
+                  <stop offset="50%" stop-color="#38bdf8" />
+                  <stop offset="100%" stop-color="#0369a1" />
+                </linearGradient>
+              </defs>
+              <!-- Nét sóng cảnh báo hai bên (chỉ hiện ở trạng thái đỏ) -->
+              <g id="bellAlertWaves" style="display: none;" stroke="#dc2626" stroke-width="3.2" stroke-linecap="round" fill="none">
+                <path d="M18,24 Q10,36 18,48" />
+                <path d="M10,18 Q0,36 10,54" />
+                <path d="M82,24 Q90,36 82,48" />
+                <path d="M90,18 Q100,36 90,54" />
+              </g>
+              <!-- Quai chuông -->
+              <circle cx="50" cy="10" r="6" fill="#ca8a04" stroke="#713f12" stroke-width="2" />
+              <!-- Quả lắc chuông -->
+              <circle id="bellClapper" cx="50" cy="64" r="7.5" fill="#15803d" stroke="#0f172a" stroke-width="2.2" />
+              <!-- Thân chuông -->
+              <path
+                id="bellBody"
+                d="M50,14 C33,14 27,27 27,44 C27,53 20,58 20,60 L80,60 C80,58 73,53 73,44 C73,27 67,14 50,14 Z"
+                fill="url(#bellGradGreen)"
+                stroke="#14532d"
+                stroke-width="2.5"
+              />
+              <!-- Vệt sáng trên thân chuông -->
+              <path d="M36,24 Q32,35 32,48" stroke="rgba(255,255,255,0.65)" stroke-width="3.5" stroke-linecap="round" fill="none" />
+            </svg>
+          </div>
+
+          <!-- Trái Đất biểu cảm (Chỉ 1 Trái Đất duy nhất tại một thời điểm) -->
+          <div class="earth-wrapper">
+            <svg id="earthSvg" viewBox="0 0 240 240" width="100%" height="100%" aria-label="Hình minh họa Trái Đất biểu cảm">
+              <defs>
+                <radialGradient id="oceanGrad" cx="38%" cy="32%" r="68%">
+                  <stop offset="0%" stop-color="#60c5ff" />
+                  <stop offset="60%" stop-color="#1d8cf8" />
+                  <stop offset="100%" stop-color="#0b53c1" />
+                </radialGradient>
+                <radialGradient id="auraGreen" cx="50%" cy="50%" r="50%">
+                  <stop offset="65%" stop-color="#bae6fd" stop-opacity="0.55" />
+                  <stop offset="100%" stop-color="#bae6fd" stop-opacity="0" />
+                </radialGradient>
+                <radialGradient id="auraRed" cx="50%" cy="50%" r="50%">
+                  <stop offset="65%" stop-color="#fca5a5" stop-opacity="0.45" />
+                  <stop offset="100%" stop-color="#94a3b8" stop-opacity="0" />
+                </radialGradient>
+                <clipPath id="earthSphereClip">
+                  <circle cx="120" cy="122" r="78" />
+                </clipPath>
+              </defs>
+
+              <!-- Vầng hào quang nền -->
+              <circle id="earthAura" cx="120" cy="122" r="108" fill="url(#auraGreen)" />
+
+              <!-- Đồi cỏ nhỏ dưới chân Trái Đất -->
+              <ellipse cx="120" cy="204" rx="76" ry="14" fill="#86efac" opacity="0.65" />
+
+              <!-- Quả cầu đại dương -->
+              <circle cx="120" cy="122" r="78" fill="url(#oceanGrad)" stroke="#092c58" stroke-width="3" />
+
+              <!-- Các lục địa xanh lá bên trong hình cầu -->
+              <g clip-path="url(#earthSphereClip)" fill="#4ade80" stroke="#16a34a" stroke-width="1.5">
+                <path d="M52,65 Q75,55 88,72 Q98,86 80,104 Q62,115 46,98 Z" />
+                <path d="M138,52 Q165,48 184,74 Q192,102 168,112 Q148,108 142,88 Q130,72 138,52 Z" />
+                <path d="M56,144 Q76,136 90,156 Q96,178 74,192 Q52,185 56,144 Z" />
+                <path d="M154,142 Q178,138 190,162 Q180,188 156,184 Q144,164 154,142 Z" />
+                <path d="M102,44 Q122,40 128,55 Q114,64 102,56 Z" />
+              </g>
+
+              <!-- Bóng sáng mặt cầu -->
+              <ellipse cx="92" cy="72" rx="34" ry="16" fill="rgba(255,255,255,0.28)" transform="rotate(-22 92 72)" />
+
+              <!-- ================= BIỂU CẢM 1: VUI TƯƠI (TRẠNG THÁI XANH) ================= -->
+              <g id="faceGreen">
+                <!-- Ngôi sao lấp lánh -->
+                <path d="M34,62 L38,72 L48,76 L38,80 L34,90 L30,80 L20,76 L30,72 Z" fill="#facc15" />
+                <path d="M204,70 L207,78 L215,81 L207,84 L204,92 L201,84 L193,81 L201,78 Z" fill="#facc15" />
+                <!-- Hai mắt cười cong vui vẻ -->
+                <path d="M82,108 Q95,90 108,108" fill="none" stroke="#091e3a" stroke-width="6" stroke-linecap="round" />
+                <path d="M132,108 Q145,90 158,108" fill="none" stroke="#091e3a" stroke-width="6" stroke-linecap="round" />
+                <!-- Má hồng -->
+                <ellipse cx="76" cy="122" rx="11" ry="6.5" fill="#fb7185" opacity="0.78" />
+                <ellipse cx="164" cy="122" rx="11" ry="6.5" fill="#fb7185" opacity="0.78" />
+                <!-- Miệng cười tươi rõ -->
+                <path d="M95,124 Q120,128 145,124 C145,152 95,152 95,124 Z" fill="#991b1b" stroke="#091e3a" stroke-width="3.2" stroke-linejoin="round" />
+                <path d="M103,138 Q120,128 137,138 C132,148 108,148 103,138 Z" fill="#fb7185" />
+                <!-- Hai tay nhỏ vẫy chào vui vẻ -->
+                <g stroke="#091e3a" stroke-width="3" fill="#ffffff">
+                  <path d="M44,126 C26,120 22,102 36,98 C42,96 48,103 48,110 Z" />
+                  <path d="M196,126 C214,120 218,102 204,98 C198,96 192,103 192,110 Z" />
+                </g>
+              </g>
+
+              <!-- ================= BIỂU CẢM 2: BUỒN & LO LẮNG (TRẠNG THÁI ĐỎ) ================= -->
+              <g id="faceRed" style="display: none;">
+                <!-- Đám khói xám nhỏ quanh Trái Đất -->
+                <ellipse cx="46" cy="76" rx="18" ry="10" fill="#94a3b8" opacity="0.75" />
+                <ellipse cx="196" cy="82" rx="20" ry="11" fill="#94a3b8" opacity="0.75" />
+                <!-- Lông mày lo lắng xếch lên ở giữa -->
+                <line x1="78" y1="96" x2="106" y2="86" stroke="#091e3a" stroke-width="5" stroke-linecap="round" />
+                <line x1="162" y1="96" x2="134" y2="86" stroke="#091e3a" stroke-width="5" stroke-linecap="round" />
+                <!-- Đôi mắt buồn -->
+                <ellipse cx="94" cy="108" rx="8.5" ry="9.5" fill="#091e3a" />
+                <ellipse cx="146" cy="108" rx="8.5" ry="9.5" fill="#091e3a" />
+                <circle cx="91" cy="104" r="3" fill="#ffffff" />
+                <circle cx="143" cy="104" r="3" fill="#ffffff" />
+                <!-- Hai giọt nước mắt rõ rệt -->
+                <path d="M84,116 C78,128 84,136 89,134 C93,132 91,124 84,116 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1.5" />
+                <path d="M156,116 C162,128 156,136 151,134 C147,132 149,124 156,116 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1.5" />
+                <!-- Miệng cong xuống buồn bã -->
+                <path d="M98,146 Q120,126 142,146" fill="none" stroke="#091e3a" stroke-width="5" stroke-linecap="round" />
+                <!-- Hai tay ôm má lo lắng -->
+                <g stroke="#091e3a" stroke-width="3" fill="#ffffff">
+                  <ellipse cx="52" cy="134" rx="12" ry="9" transform="rotate(-20 52 134)" />
+                  <ellipse cx="188" cy="134" rx="12" ry="9" transform="rotate(20 188 134)" />
+                </g>
+              </g>
+
+              <!-- ================= BIỂU CẢM 3: SUY NGHĨ (NGOÀI PHẠM VI) ================= -->
+              <g id="faceNeutral" style="display: none;">
+                <!-- Lông mày một bên cao một bên ngang đăm chiêu -->
+                <path d="M80,90 Q94,82 106,90" fill="none" stroke="#091e3a" stroke-width="4.5" stroke-linecap="round" />
+                <line x1="134" y1="92" x2="158" y2="92" stroke="#091e3a" stroke-width="4.5" stroke-linecap="round" />
+                <!-- Mắt nhìn nghiêng suy nghĩ -->
+                <circle cx="94" cy="108" r="8" fill="#091e3a" />
+                <circle cx="146" cy="108" r="8" fill="#091e3a" />
+                <circle cx="96" cy="104" r="3" fill="#ffffff" />
+                <circle cx="148" cy="104" r="3" fill="#ffffff" />
+                <!-- Miệng suy tư -->
+                <path d="M106,136 Q120,134 132,140" fill="none" stroke="#091e3a" stroke-width="4.5" stroke-linecap="round" />
+                <!-- Một tay chống cằm suy nghĩ -->
+                <g stroke="#091e3a" stroke-width="3" fill="#ffffff">
+                  <ellipse cx="44" cy="132" rx="11" ry="8" />
+                  <ellipse cx="136" cy="154" rx="12" ry="9" transform="rotate(-15 136 154)" />
+                </g>
+              </g>
+            </svg>
+          </div>
+
+          <!-- Khung thông báo trạng thái -->
+          <div id="statusBannerBox" class="status-banner-box state-green" role="status" aria-live="polite">
+            <div class="status-title-row">
+              <span id="statusIconWrap" aria-hidden="true">
+                <!-- Biểu tượng chiếc lá xanh -->
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                  <path d="M17 3C11 3 5 7 5 14C5 17.5 7.5 20 11 20C18 20 21 14 21 6C21 4 19 3 17 3Z" fill="#16a34a" />
+                  <path d="M5 20C8 15 12 11 18 8" stroke="#dcfce7" stroke-width="2" stroke-linecap="round" />
+                </svg>
+              </span>
+              <span id="statusMainText">KHÔNG KHÍ TRONG LÀNH</span>
+            </div>
+
+            <!-- Danh sách các thay đổi đang xảy ra (chỉ hiển thị khi ở trạng thái cảnh báo đỏ) -->
+            <div id="statusChangesWrap" class="status-changes-wrap" aria-live="polite">
+              <div class="status-changes-heading">Thay đổi so với ban đầu:</div>
+              <ul id="statusChangesList" class="status-changes-list"></ul>
+            </div>
+
+            <div id="statusSubText" class="status-sub-row">Trạng thái minh họa theo quy ước bài học.</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ======================================================================
+         CUỐI GIAO DIỆN: NÚT SO SÁNH, ĐẶT LẠI & GHI CHÚ MÔ PHỎNG
+         ====================================================================== -->
+    <footer class="bottom-bar">
+      <div class="action-buttons-group">
+        <button id="btnCompare" type="button" class="btn-action btn-compare">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="3" y="12" width="4" height="8" rx="1" fill="#ffffff" />
+            <rect x="10" y="7" width="4" height="13" rx="1" fill="#ffffff" />
+            <rect x="17" y="3" width="4" height="17" rx="1" fill="#ffffff" />
+          </svg>
+          <span>So sánh</span>
+        </button>
+
+        <button id="btnReset" type="button" class="btn-action btn-reset">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M20 11A8 8 0 1 0 18 16.5" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" />
+            <polyline points="20 6 20 11 15 11" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <span>Đặt lại</span>
+        </button>
+      </div>
+
+      <div class="disclaimer-text">
+        Mô phỏng học tập; không dùng đánh giá chất lượng không khí thực tế.
+      </div>
+    </footer>
+  </div>
+
+  <!-- ========================================================================
+       HỘP THOẠI SO SÁNH MẪU KHÔNG KHÍ
+       ======================================================================== -->
+  <div id="compareModalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="compareModalTitle">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2 id="compareModalTitle" class="modal-title">SO SÁNH MẪU KHÔNG KHÍ</h2>
+        <button id="btnCloseCompare" type="button" class="modal-close-btn" aria-label="Đóng hộp thoại So sánh">Đóng ✕</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- PHẦN 1: Thành phần khí -->
+        <div class="compare-section-box">
+          <div class="compare-sec-header">
+            <span class="compare-sec-title">PHẦN 1: Thành phần khí</span>
+            <span class="compare-sec-unit">Đơn vị: % theo thể tích</span>
+          </div>
+          <table class="compare-table" aria-label="Bảng so sánh thành phần khí">
+            <thead>
+              <tr>
+                <th>Thành phần</th>
+                <th class="num-col">Ban đầu</th>
+                <th class="num-col">Hiện tại</th>
+                <th class="status-col">Thay đổi</th>
+              </tr>
+            </thead>
+            <tbody id="compareGasTbody">
+              <!-- Dữ liệu được cập nhật tự động bằng JS, chỉ ghi số không lặp dấu % -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- PHẦN 2: Mức bổ sung -->
+        <div class="compare-section-box">
+          <div class="compare-sec-header">
+            <span class="compare-sec-title">PHẦN 2: Mức bổ sung</span>
+            <span class="compare-sec-unit">Thang quy ước 0–100, không phải % thể tích.</span>
+          </div>
+          <table class="compare-table" aria-label="Bảng so sánh mức bổ sung">
+            <thead>
+              <tr>
+                <th>Yếu tố</th>
+                <th class="num-col">Ban đầu</th>
+                <th class="num-col">Hiện tại</th>
+                <th class="status-col">Thay đổi</th>
+              </tr>
+            </thead>
+            <tbody id="comparePollutantTbody">
+              <!-- Dữ liệu được cập nhật tự động bằng JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Câu hỏi gợi mở cuối hộp thoại -->
+        <div class="compare-question-box">
+          Những yếu tố nào đã thay đổi so với ban đầu?
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       HỘP THOẠI TRỢ GIÚP & QUY ƯỚC MÔ HÌNH
+       ======================================================================== -->
+  <div id="helpModalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle">
+    <div class="modal-dialog" style="max-width: 560px;">
+      <div class="modal-header">
+        <h2 id="helpModalTitle" class="modal-title">TRỢ GIÚP & QUY ƯỚC MÔ HÌNH</h2>
+        <button id="btnCloseHelp" type="button" class="modal-close-btn" aria-label="Đóng hộp thoại Trợ giúp">Đóng ✕</button>
+      </div>
+      <div class="modal-body" style="font-size: 0.92rem; line-height: 1.55; color: #1e293b;">
+        <div class="compare-section-box">
+          <p style="margin: 0 0 8px 0; font-weight: 800; color: #092c58;">1. Quy ước về thành phần và cân bằng tổng 100%:</p>
+          <ul style="margin: 0; padding-left: 20px;">
+            <li>Mẫu quy ước ban đầu; hơi nước trong thực tế thay đổi.</li>
+            <li><strong>Nitrogen được phần mềm điều chỉnh để tổng bằng 100%; đây là quy ước của mô hình.</strong></li>
+            <li>Các khí khác được giữ cố định ở mức 0,86%.</li>
+          </ul>
+        </div>
+
+        <div class="compare-section-box">
+          <p style="margin: 0 0 8px 0; font-weight: 800; color: #092c58;">2. Quy ước về trạng thái và cảnh báo:</p>
+          <ul style="margin: 0; padding-left: 20px;">
+            <li><strong>Đèn báo theo quy ước tình huống học tập, không phải ngưỡng môi trường.</strong></li>
+            <li>Hạt trong kính lúp là hình minh họa; số lượng hạt không biểu diễn đúng tỉ lệ phần trăm.</li>
+            <li>Mô phỏng học tập; không dùng đánh giá chất lượng không khí thực tế.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MÃ NGUỒN JAVASCRIPT ĐIỀU KHIỂN TOÀN BỘ MÔ PHỎNG
+       ======================================================================== -->
+  <script>
+    (function () {
+      'use strict';
+
+      /* ======================================================================
+         1. HẰNG SỐ VÀ TRẠNG THÁI MẪU QUY ƯỚC (Tính theo 1/100 của %, tức 1% = 100)
+            Giúp phép tính thập phân chính xác tuyệt đối, tổng luôn bằng 100,00%
+         ====================================================================== */
+      const INITIAL_STATE = {
+        n2BP: 7800,     // 78,00%
+        o2BP: 2100,     // 21,00%
+        co2BP: 4,       // 0,04%
+        h2oBP: 10,      // 0,10%
+        otherBP: 86,    // 0,86%
+        toxic: 0,       // 0/100
+        smoke: 0        // 0/100
+      };
+
+      const GAS_CONFIG = {
+        o2: {
+          minBP: 1800,  // 18,00%
+          maxBP: 2300,  // 23,00%
+          stepBP: 10    // 0,10%
+        },
+        co2: {
+          minBP: 0,     // 0,00%
+          maxBP: 30,    // 0,30%
+          stepBP: 1     // 0,01%
+        },
+        h2o: {
+          minBP: 0,     // 0,00%
+          maxBP: 50,    // 0,50%
+          stepBP: 5     // 0,05%
+        }
+      };
+
+      // Trạng thái hiện tại của mô phỏng
+      const state = {
+        n2BP: INITIAL_STATE.n2BP,
+        o2BP: INITIAL_STATE.o2BP,
+        co2BP: INITIAL_STATE.co2BP,
+        h2oBP: INITIAL_STATE.h2oBP,
+        otherBP: INITIAL_STATE.otherBP,
+        toxic: INITIAL_STATE.toxic,
+        smoke: INITIAL_STATE.smoke,
+        status: 'green' // 'green' | 'red' | 'neutral'
+      };
+
+      /* ======================================================================
+         2. THAM CHIẾU PHẦN TỬ DOM
+         ====================================================================== */
+      const dom = {
+        valN2: document.getElementById('valN2'),
+        valO2: document.getElementById('valO2'),
+        valCO2: document.getElementById('valCO2'),
+        valH2O: document.getElementById('valH2O'),
+        valTotal: document.getElementById('valTotal'),
+        fillN2: document.getElementById('fillN2'),
+        fillO2: document.getElementById('fillO2'),
+        fillCO2: document.getElementById('fillCO2'),
+        fillH2O: document.getElementById('fillH2O'),
+        colO2: document.getElementById('colO2'),
+        colCO2: document.getElementById('colCO2'),
+        colH2O: document.getElementById('colH2O'),
+        magValCO2: document.getElementById('magValCO2'),
+        magBarCO2: document.getElementById('magBarCO2'),
+        magValH2O: document.getElementById('magValH2O'),
+        magBarH2O: document.getElementById('magBarH2O'),
+        sliderToxic: document.getElementById('sliderToxic'),
+        valToxic: document.getElementById('valToxic'),
+        sliderSmoke: document.getElementById('sliderSmoke'),
+        valSmoke: document.getElementById('valSmoke'),
+        bellSvg: document.getElementById('bellSvg'),
+        bellBody: document.getElementById('bellBody'),
+        bellClapper: document.getElementById('bellClapper'),
+        bellAlertWaves: document.getElementById('bellAlertWaves'),
+        earthAura: document.getElementById('earthAura'),
+        faceGreen: document.getElementById('faceGreen'),
+        faceRed: document.getElementById('faceRed'),
+        faceNeutral: document.getElementById('faceNeutral'),
+        statusBannerBox: document.getElementById('statusBannerBox'),
+        statusIconWrap: document.getElementById('statusIconWrap'),
+        statusMainText: document.getElementById('statusMainText'),
+        statusChangesWrap: document.getElementById('statusChangesWrap'),
+        statusChangesList: document.getElementById('statusChangesList'),
+        statusSubText: document.getElementById('statusSubText'),
+        btnToggleSound: document.getElementById('btnToggleSound'),
+        soundIconWrap: document.getElementById('soundIconWrap'),
+        soundBtnLabel: document.getElementById('soundBtnLabel'),
+        volumeSlider: document.getElementById('volumeSlider'),
+        audioHintBadge: document.getElementById('audioHintBadge'),
+        btnCompare: document.getElementById('btnCompare'),
+        btnReset: document.getElementById('btnReset'),
+        compareModalBackdrop: document.getElementById('compareModalBackdrop'),
+        btnCloseCompare: document.getElementById('btnCloseCompare'),
+        compareGasTbody: document.getElementById('compareGasTbody'),
+        comparePollutantTbody: document.getElementById('comparePollutantTbody'),
+        btnOpenHelp: document.getElementById('btnOpenHelp'),
+        helpModalBackdrop: document.getElementById('helpModalBackdrop'),
+        btnCloseHelp: document.getElementById('btnCloseHelp'),
+        lensContainer: document.getElementById('lensContainer'),
+        particleCanvas: document.getElementById('particleCanvas')
+      };
+
+      /* ======================================================================
+         3. HÀM TIỆN ÍCH ĐỊNH DẠNG SỐ LIỆU & TỰ CÂN BẰNG NITROGEN
+         ====================================================================== */
+      function formatBP(bp) {
+        const clamped = Math.max(0, Math.round(bp));
+        const whole = Math.floor(clamped / 100);
+        const frac = clamped % 100;
+        return whole + ',' + (frac < 10 ? '0' + frac : String(frac));
+      }
+
+      function formatPercent(bp) {
+        return formatBP(bp) + '%';
+      }
+
+      function recalcNitrogen() {
+        // Nitrogen = 100,00% - Oxygen - Carbon dioxide - Hơi nước - 0,86%
+        state.n2BP = 10000 - state.o2BP - state.co2BP - state.h2oBP - state.otherBP;
+      }
+
+      /* ======================================================================
+         4. HỆ THỐNG ÂM THANH CẢNH BÁO (WEB AUDIO API)
+         ====================================================================== */
+      let audioCtx = null;
+      let isSoundEnabled = false;
+      let soundVolume = 0.7;
+      let activeAlarmTimers = [];
+      let activeOscillators = [];
+      let isAlarmPlaying = false;
+      let lastAlarmStartTime = 0;
+
+      function ensureAudioContext() {
+        try {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextClass) return null;
+          if (!audioCtx) {
+            audioCtx = new AudioContextClass();
+          }
+          if (audioCtx.state === 'suspended') {
+            audioCtx.resume().catch(function () {});
+          }
+          if (audioCtx.state === 'running' && dom.audioHintBadge) {
+            dom.audioHintBadge.style.display = 'none';
+          }
+          return audioCtx;
+        } catch (err) {
+          return null;
+        }
+      }
+
+      function playSingleBeep(freq, durationSec, maxGain) {
+        try {
+          const ctxAudio = ensureAudioContext();
+          if (!ctxAudio || ctxAudio.state !== 'running') return;
+
+          const now = ctxAudio.currentTime;
+          const osc = ctxAudio.createOscillator();
+          const gainNode = ctxAudio.createGain();
+
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now);
+
+          const peak = Math.max(0.001, Math.min(0.35, maxGain));
+          gainNode.gain.setValueAtTime(0.0001, now);
+          gainNode.gain.linearRampToValueAtTime(peak, now + 0.025);
+          gainNode.gain.setValueAtTime(peak, now + Math.max(0.03, durationSec - 0.04));
+          gainNode.gain.linearRampToValueAtTime(0.0001, now + durationSec);
+
+          osc.connect(gainNode);
+          gainNode.connect(ctxAudio.destination);
+
+          const oscEntry = { osc: osc };
+          activeOscillators.push(oscEntry);
+
+          osc.onended = function () {
+            const idx = activeOscillators.indexOf(oscEntry);
+            if (idx !== -1) activeOscillators.splice(idx, 1);
+            try {
+              osc.disconnect();
+              gainNode.disconnect();
+            } catch (e) {}
+          };
+
+          osc.start(now);
+          osc.stop(now + durationSec + 0.01);
+        } catch (err) {
+          // Lỗi âm thanh không làm ảnh hưởng mô phỏng
+        }
+      }
+
+      function stopActiveAlarm() {
+        while (activeAlarmTimers.length > 0) {
+          clearTimeout(activeAlarmTimers.pop());
+        }
+        while (activeOscillators.length > 0) {
+          const item = activeOscillators.pop();
+          try {
+            item.osc.stop();
+            item.osc.disconnect();
+          } catch (e) {}
+        }
+        isAlarmPlaying = false;
+        if (dom.bellSvg) {
+          dom.bellSvg.classList.remove('ringing');
+        }
+      }
+
+      function triggerRedAlertEffect() {
+        if (isAlarmPlaying) return;
+
+        const nowMs = performance.now();
+        // Giới hạn phát lại nếu chuyển trạng thái qua lại quá nhanh (< 600ms)
+        const cooldownPassed = nowMs - lastAlarmStartTime > 600;
+        lastAlarmStartTime = nowMs;
+
+        isAlarmPlaying = true;
+        dom.bellSvg.classList.add('ringing');
+
+        // Chuỗi 5 tiếng bíp cảnh báo rõ trong khoảng 3 giây
+        if (isSoundEnabled && soundVolume > 0 && cooldownPassed) {
+          const ctxAudio = ensureAudioContext();
+          if (!ctxAudio || ctxAudio.state !== 'running') {
+            if (dom.audioHintBadge) {
+              dom.audioHintBadge.style.display = 'inline-block';
+            }
+          } else {
+            const freqs = [880, 740, 880, 740, 880];
+            const intervalMs = 580;
+            const beepDurationSec = 0.34;
+
+            freqs.forEach(function (freq, index) {
+              const tId = setTimeout(function () {
+                if (!isAlarmPlaying || state.status !== 'red' || !isSoundEnabled) return;
+                playSingleBeep(freq, beepDurationSec, soundVolume * 0.28);
+              }, index * intervalMs);
+              activeAlarmTimers.push(tId);
+            });
+          }
+        }
+
+        // Dừng hiệu ứng rung chuông sau ~3 giây (màu chuông vẫn giữ đỏ khi còn ô nhiễm)
+        const stopRingTimer = setTimeout(function () {
+          if (dom.bellSvg) {
+            dom.bellSvg.classList.remove('ringing');
+          }
+          isAlarmPlaying = false;
+        }, 3000);
+        activeAlarmTimers.push(stopRingTimer);
+      }
+
+      function updateSoundButtonUI() {
+        if (isSoundEnabled && soundVolume > 0) {
+          dom.btnToggleSound.classList.remove('muted');
+          dom.btnToggleSound.setAttribute('aria-pressed', 'true');
+          dom.soundIconWrap.textContent = '🔊';
+          dom.soundBtnLabel.textContent = 'Tắt âm';
+          if (dom.audioHintBadge) {
+            dom.audioHintBadge.style.display = 'none';
+          }
+        } else {
+          dom.btnToggleSound.classList.add('muted');
+          dom.btnToggleSound.setAttribute('aria-pressed', 'false');
+          dom.soundIconWrap.textContent = '🔇';
+          dom.soundBtnLabel.textContent = 'Bật âm';
+        }
+      }
+
+      dom.btnToggleSound.addEventListener('click', function () {
+        isSoundEnabled = !isSoundEnabled;
+        if (isSoundEnabled) {
+          if (soundVolume === 0) {
+            soundVolume = 0.7;
+            dom.volumeSlider.value = '70';
+          }
+          ensureAudioContext();
+          // Phát âm thử ngắn xác nhận đã bật âm
+          playSingleBeep(820, 0.12, soundVolume * 0.22);
+        } else {
+          // Dừng âm đang phát nếu người dùng tắt âm
+          while (activeOscillators.length > 0) {
+            const item = activeOscillators.pop();
+            try {
+              item.osc.stop();
+              item.osc.disconnect();
+            } catch (e) {}
+          }
+        }
+        updateSoundButtonUI();
+      });
+
+      dom.volumeSlider.addEventListener('input', function () {
+        const val = parseInt(dom.volumeSlider.value, 10) || 0;
+        soundVolume = val / 100;
+        if (val > 0 && !isSoundEnabled) {
+          isSoundEnabled = true;
+          ensureAudioContext();
+        } else if (val === 0 && isSoundEnabled) {
+          isSoundEnabled = false;
+        }
+        updateSoundButtonUI();
+      });
+
+      /* ======================================================================
+         5. LOGIC ĐÁNH GIÁ TRẠNG THÁI & DANH SÁCH THAY ĐỔI DÙNG CHUNG NGUỒN DỮ LIỆU
+         ====================================================================== */
+      function getActivePollutionChanges() {
+        const changes = [];
+
+        // A. Oxygen: thấp hơn mức ban đầu (21,00%)
+        if (state.o2BP < INITIAL_STATE.o2BP) {
+          changes.push('Oxygen giảm so với ban đầu.');
+        }
+
+        // B. Carbon dioxide: cao hơn mức ban đầu (0,04%)
+        if (state.co2BP > INITIAL_STATE.co2BP) {
+          changes.push('Carbon dioxide tăng so với ban đầu.');
+        }
+
+        // C. Khí độc hại: mức bổ sung lớn hơn 0
+        if (state.toxic > INITIAL_STATE.toxic) {
+          changes.push('Xuất hiện thêm khí độc hại.');
+        }
+
+        // D. Khói, bụi: mức bổ sung lớn hơn 0
+        if (state.smoke > INITIAL_STATE.smoke) {
+          changes.push('Xuất hiện thêm khói, bụi.');
+        }
+
+        return changes;
+      }
+
+      function computeStatus(activeChanges) {
+        const changes = activeChanges || getActivePollutionChanges();
+        if (changes.length > 0) {
+          return 'red';
+        }
+
+        const isGreen =
+          state.o2BP === INITIAL_STATE.o2BP &&
+          state.co2BP === INITIAL_STATE.co2BP &&
+          state.toxic === INITIAL_STATE.toxic &&
+          state.smoke === INITIAL_STATE.smoke;
+
+        if (isGreen) return 'green';
+
+        return 'neutral';
+      }
+
+      function renderStatusPanel(newStatus, prevStatus, activeChanges) {
+        // Chỉ hiển thị đúng 1 khuôn mặt Trái Đất
+        dom.faceGreen.style.display = newStatus === 'green' ? 'block' : 'none';
+        dom.faceRed.style.display = newStatus === 'red' ? 'block' : 'none';
+        dom.faceNeutral.style.display = newStatus === 'neutral' ? 'block' : 'none';
+
+        dom.statusBannerBox.classList.remove('state-green', 'state-red', 'state-neutral');
+
+        if (newStatus === 'green') {
+          stopActiveAlarm();
+          dom.bellBody.setAttribute('fill', 'url(#bellGradGreen)');
+          dom.bellBody.setAttribute('stroke', '#14532d');
+          dom.bellClapper.setAttribute('fill', '#15803d');
+          dom.bellAlertWaves.style.display = 'none';
+          dom.earthAura.setAttribute('fill', 'url(#auraGreen)');
+
+          dom.statusBannerBox.classList.add('state-green');
+          dom.statusIconWrap.innerHTML =
+            '<svg width="26" height="26" viewBox="0 0 24 24" fill="none">' +
+            '<path d="M17 3C11 3 5 7 5 14C5 17.5 7.5 20 11 20C18 20 21 14 21 6C21 4 19 3 17 3Z" fill="#16a34a"/>' +
+            '<path d="M5 20C8 15 12 11 18 8" stroke="#dcfce7" stroke-width="2" stroke-linecap="round"/>' +
+            '</svg>';
+          dom.statusMainText.textContent = 'KHÔNG KHÍ TRONG LÀNH';
+          dom.statusChangesWrap.classList.remove('active');
+          dom.statusChangesList.innerHTML = '';
+          dom.statusSubText.textContent = 'Trạng thái minh họa theo quy ước bài học.';
+        } else if (newStatus === 'red') {
+          dom.bellBody.setAttribute('fill', 'url(#bellGradRed)');
+          dom.bellBody.setAttribute('stroke', '#7f1d1d');
+          dom.bellClapper.setAttribute('fill', '#991b1b');
+          dom.bellAlertWaves.style.display = 'block';
+          dom.earthAura.setAttribute('fill', 'url(#auraRed)');
+
+          dom.statusBannerBox.classList.add('state-red');
+          dom.statusIconWrap.innerHTML =
+            '<svg width="26" height="26" viewBox="0 0 24 24" fill="none">' +
+            '<path d="M12 3L22 20H2L12 3Z" fill="#dc2626" stroke="#7f1d1d" stroke-width="1.5" stroke-linejoin="round"/>' +
+            '<line x1="12" y1="9" x2="12" y2="14" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>' +
+            '<circle cx="12" cy="17.2" r="1.3" fill="#ffffff"/>' +
+            '</svg>';
+          dom.statusMainText.textContent = 'KHÔNG KHÍ BỊ Ô NHIỄM';
+
+          // Cập nhật danh sách các thay đổi đang xảy ra ngay dưới dòng KHÔNG KHÍ BỊ Ô NHIỄM
+          dom.statusChangesList.innerHTML = activeChanges
+            .map(function (itemText) {
+              return '<li>' + itemText + '</li>';
+            })
+            .join('');
+          dom.statusChangesWrap.classList.add('active');
+
+          dom.statusSubText.textContent = 'Trạng thái minh họa theo quy ước bài học.';
+
+          // Chỉ phát chuỗi cảnh báo khi chuyển từ trạng thái không đỏ sang đỏ
+          if (prevStatus !== 'red') {
+            triggerRedAlertEffect();
+          }
+        } else {
+          // Ngoài phạm vi đánh giá
+          stopActiveAlarm();
+          dom.bellBody.setAttribute('fill', 'url(#bellGradNeutral)');
+          dom.bellBody.setAttribute('stroke', '#0c4a6e');
+          dom.bellClapper.setAttribute('fill', '#0369a1');
+          dom.bellAlertWaves.style.display = 'none';
+          dom.earthAura.setAttribute('fill', 'url(#auraGreen)');
+
+          dom.statusBannerBox.classList.add('state-neutral');
+          dom.statusIconWrap.innerHTML =
+            '<svg width="26" height="26" viewBox="0 0 24 24" fill="none">' +
+            '<circle cx="12" cy="12" r="9.5" fill="#0284c7" stroke="#0c4a6e" stroke-width="1.5"/>' +
+            '<text x="12" y="16.5" font-size="13" font-weight="bold" fill="#ffffff" text-anchor="middle">?</text>' +
+            '</svg>';
+          dom.statusMainText.textContent = 'NGOÀI PHẠM VI ĐÁNH GIÁ CỦA MÔ HÌNH';
+          dom.statusChangesWrap.classList.remove('active');
+          dom.statusChangesList.innerHTML = '';
+          dom.statusSubText.textContent = 'Trạng thái minh họa theo quy ước bài học.';
+        }
+      }
+
+      /* ======================================================================
+         6. CẬP NHẬT GIAO DIỆN CỘT, Ô PHÓNG ĐẠI, HẠT VÀ BẢNG SO SÁNH
+         ====================================================================== */
+      function updateAllUI() {
+        recalcNitrogen();
+
+        // 1. Nhãn số trên 4 cột
+        dom.valN2.textContent = formatPercent(state.n2BP);
+        dom.valO2.textContent = formatPercent(state.o2BP);
+        dom.valCO2.textContent = formatPercent(state.co2BP);
+        dom.valH2O.textContent = formatPercent(state.h2oBP);
+
+        // 2. Chiều cao mức màu đúng bằng giá trị / 100 * chiều cao lòng cột
+        dom.fillN2.style.height = (state.n2BP / 100) + '%';
+        dom.fillO2.style.height = (state.o2BP / 100) + '%';
+        dom.fillCO2.style.height = (state.co2BP / 100) + '%';
+        dom.fillH2O.style.height = (state.h2oBP / 100) + '%';
+
+        // 3. Thuộc tính ARIA cho các cột kéo
+        dom.colO2.setAttribute('aria-valuenow', (state.o2BP / 100).toFixed(2));
+        dom.colO2.setAttribute('aria-valuetext', formatPercent(state.o2BP));
+
+        dom.colCO2.setAttribute('aria-valuenow', (state.co2BP / 100).toFixed(2));
+        dom.colCO2.setAttribute('aria-valuetext', formatPercent(state.co2BP));
+
+        dom.colH2O.setAttribute('aria-valuenow', (state.h2oBP / 100).toFixed(2));
+        dom.colH2O.setAttribute('aria-valuetext', formatPercent(state.h2oBP));
+
+        // 4. Tổng thành phần luôn 100,00%
+        const totalBP = state.n2BP + state.o2BP + state.co2BP + state.h2oBP + state.otherBP;
+        dom.valTotal.textContent = formatPercent(totalBP);
+
+        // 5. Ô phóng đại hàm lượng nhỏ
+        dom.magValCO2.textContent = formatPercent(state.co2BP);
+        const co2WidthPercent = (state.co2BP / GAS_CONFIG.co2.maxBP) * 100;
+        dom.magBarCO2.style.width = co2WidthPercent.toFixed(4) + '%';
+
+        dom.magValH2O.textContent = formatPercent(state.h2oBP);
+        const h2oWidthPercent = (state.h2oBP / GAS_CONFIG.h2o.maxBP) * 100;
+        dom.magBarH2O.style.width = h2oWidthPercent.toFixed(4) + '%';
+
+        // 6. Hai thanh trượt bổ sung
+        dom.valToxic.textContent = 'Mức: ' + state.toxic + '/100';
+        dom.valSmoke.textContent = 'Mức: ' + state.smoke + '/100';
+
+        // 7. Đồng bộ số lượng mô hình hạt trong kính lúp (giữ nguyên vị trí & vận tốc hạt đang có)
+        syncParticleCounts();
+
+        // 8. Đánh giá trạng thái & danh sách thay đổi từ cùng một nguồn dữ liệu
+        const prevStatus = state.status;
+        const activeChanges = getActivePollutionChanges();
+        const nextStatus = computeStatus(activeChanges);
+        state.status = nextStatus;
+        renderStatusPanel(nextStatus, prevStatus, activeChanges);
+
+        // 9. Nếu hộp thoại So sánh đang mở, cập nhật luôn bảng dữ liệu
+        if (dom.compareModalBackdrop.classList.contains('open')) {
+          renderCompareTables();
+        }
+      }
+
+      /* ======================================================================
+         7. THAO TÁC KÉO TƯƠNG ĐỐI TRÊN CỘT (POINTER EVENTS & BÀN PHÍM)
+         ====================================================================== */
+      let activeDrag = null;
+
+      function setupColumnDragging(colEl, gasKey) {
+        const cfg = GAS_CONFIG[gasKey];
+        const propName = gasKey + 'BP';
+
+        colEl.addEventListener('pointerdown', function (e) {
+          if (e.button !== undefined && e.button !== 0) return;
+          e.preventDefault();
+
+          if (isSoundEnabled) {
+            ensureAudioContext();
+          }
+
+          colEl.focus();
+          try {
+            colEl.setPointerCapture(e.pointerId);
+          } catch (err) {}
+
+          const rect = colEl.getBoundingClientRect();
+          // Quãng đường kéo tương ứng với toàn bộ khoảng điều chỉnh của cột
+          const effectiveDragHeight = Math.max(70, rect.height * 0.78);
+
+          activeDrag = {
+            pointerId: e.pointerId,
+            colEl: colEl,
+            gasKey: gasKey,
+            propName: propName,
+            startY: e.clientY,
+            startBP: state[propName],
+            effectiveDragHeight: effectiveDragHeight
+          };
+
+          colEl.classList.add('dragging');
+        });
+
+        colEl.addEventListener('pointermove', function (e) {
+          if (!activeDrag || activeDrag.pointerId !== e.pointerId || activeDrag.gasKey !== gasKey) return;
+          e.preventDefault();
+
+          const deltaY = activeDrag.startY - e.clientY; // Kéo lên: deltaY > 0 -> tăng
+          const rangeBP = cfg.maxBP - cfg.minBP;
+          const rawDeltaBP = (deltaY / activeDrag.effectiveDragHeight) * rangeBP;
+
+          let nextBP = activeDrag.startBP + rawDeltaBP;
+          // Làm tròn đúng bước điều chỉnh
+          nextBP = Math.round(nextBP / cfg.stepBP) * cfg.stepBP;
+          // Giới hạn trong khoảng cho phép
+          nextBP = Math.max(cfg.minBP, Math.min(cfg.maxBP, nextBP));
+
+          if (nextBP !== state[propName]) {
+            state[propName] = nextBP;
+            updateAllUI();
+          }
+        });
+
+        function finishDrag(e) {
+          if (!activeDrag || activeDrag.gasKey !== gasKey) return;
+          if (e && e.pointerId !== undefined && activeDrag.pointerId !== e.pointerId) return;
+          colEl.classList.remove('dragging');
+          try {
+            if (e && e.pointerId !== undefined && colEl.hasPointerCapture(e.pointerId)) {
+              colEl.releasePointerCapture(e.pointerId);
+            }
+          } catch (err) {}
+          activeDrag = null;
+        }
+
+        colEl.addEventListener('pointerup', finishDrag);
+        colEl.addEventListener('pointercancel', finishDrag);
+        colEl.addEventListener('lostpointercapture', finishDrag);
+
+        // Hỗ trợ điều khiển bằng bàn phím khi cột được focus
+        colEl.addEventListener('keydown', function (e) {
+          let nextBP = state[propName];
+          if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
+            e.preventDefault();
+            nextBP += cfg.stepBP;
+          } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
+            e.preventDefault();
+            nextBP -= cfg.stepBP;
+          } else if (e.key === 'Home') {
+            e.preventDefault();
+            nextBP = cfg.minBP;
+          } else if (e.key === 'End') {
+            e.preventDefault();
+            nextBP = cfg.maxBP;
+          } else {
+            return;
+          }
+          nextBP = Math.max(cfg.minBP, Math.min(cfg.maxBP, nextBP));
+          if (nextBP !== state[propName]) {
+            state[propName] = nextBP;
+            updateAllUI();
+          }
+        });
+      }
+
+      setupColumnDragging(dom.colO2, 'o2');
+      setupColumnDragging(dom.colCO2, 'co2');
+      setupColumnDragging(dom.colH2O, 'h2o');
+
+      // Thanh trượt Khí độc hại & Khói, bụi
+      dom.sliderToxic.addEventListener('input', function () {
+        if (isSoundEnabled) ensureAudioContext();
+        state.toxic = parseInt(dom.sliderToxic.value, 10) || 0;
+        updateAllUI();
+      });
+
+      dom.sliderSmoke.addEventListener('input', function () {
+        if (isSoundEnabled) ensureAudioContext();
+        state.smoke = parseInt(dom.sliderSmoke.value, 10) || 0;
+        updateAllUI();
+      });
+
+      /* ======================================================================
+         8. KÍNH LÚP & HỆ THỐNG HẠT CHUYỂN ĐỘNG LIÊN TỤC TRÊN CANVAS
+         ====================================================================== */
+      const ctx = dom.particleCanvas.getContext('2d');
+      let lensRadius = 110;
+      let canvasDpr = 1;
+
+      const particlePools = {
+        n2: [],
+        o2: [],
+        co2: [],
+        h2o: [],
+        toxic: [],
+        smoke: []
+      };
+
+      // Tính số lượng mô hình hạt mục tiêu theo quy ước
+      function getTargetParticleCounts() {
+        // Ban đầu: 40 N2, 11 O2, 1 CO2, 1 H2O
+        const n2Count = Math.max(25, Math.round((state.n2BP / 7800) * 40));
+
+        // Oxygen: 21,00% -> 11 hạt; thay đổi từ 18,00% (7 hạt) đến 23,00% (14 hạt)
+        const o2Count = state.o2BP <= 0
+          ? 0
+          : Math.max(1, Math.round(11 + ((state.o2BP - 2100) / 100) * 1.4));
+
+        // Carbon dioxide: 0% -> 0 hạt; 0,04% -> 1 hạt; tăng dần lên 6 hạt ở 0,30%
+        let co2Count = 0;
+        if (state.co2BP > 0) {
+          co2Count = Math.max(1, Math.round(1 + (state.co2BP - 4) / 5));
+        }
+
+        // Hơi nước: 0% -> 0 hạt; 0,10% -> 1 hạt; tăng dần lên 5 hạt ở 0,50%
+        let h2oCount = 0;
+        if (state.h2oBP > 0) {
+          h2oCount = Math.max(1, Math.round(state.h2oBP / 10));
+        }
+
+        // Khí độc hại: 0 -> 0 hạt; 1..100 -> 1..12 hạt
+        const toxicCount = state.toxic <= 0 ? 0 : Math.max(1, Math.ceil(state.toxic / 8.5));
+
+        // Khói, bụi: 0 -> 0 hạt; 1..100 -> 1..16 hạt
+        const smokeCount = state.smoke <= 0 ? 0 : Math.max(1, Math.ceil(state.smoke / 6.25));
+
+        return {
+          n2: n2Count,
+          o2: o2Count,
+          co2: co2Count,
+          h2o: h2oCount,
+          toxic: toxicCount,
+          smoke: smokeCount
+        };
+      }
+
+      function createParticle(type) {
+        const margin = 16;
+        const maxR = Math.max(18, lensRadius - margin);
+        const dist = Math.sqrt(Math.random()) * maxR;
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 22 + Math.random() * 20; // px / giây
+        const moveAngle = Math.random() * Math.PI * 2;
+
+        return {
+          type: type,
+          x: lensRadius + Math.cos(angle) * dist,
+          y: lensRadius + Math.sin(angle) * dist,
+          vx: Math.cos(moveAngle) * speed,
+          vy: Math.sin(moveAngle) * speed,
+          rot: Math.random() * Math.PI * 2,
+          vRot: (Math.random() - 0.5) * 1.1
+        };
+      }
+
+      function syncParticleCounts() {
+        const targets = getTargetParticleCounts();
+        Object.keys(targets).forEach(function (type) {
+          const pool = particlePools[type];
+          const target = targets[type];
+          while (pool.length < target) {
+            pool.push(createParticle(type));
+          }
+          while (pool.length > target) {
+            pool.pop();
+          }
+        });
+      }
+
+      function resizeParticleCanvas() {
+        const rect = dom.lensContainer.getBoundingClientRect();
+        const newSize = Math.max(100, Math.floor(rect.width));
+        const newRadius = newSize / 2;
+        const oldRadius = lensRadius || newRadius;
+
+        canvasDpr = Math.min(window.devicePixelRatio || 1, 2);
+        dom.particleCanvas.width = Math.floor(newSize * canvasDpr);
+        dom.particleCanvas.height = Math.floor(newSize * canvasDpr);
+
+        // Điều chỉnh tọa độ các hạt hiện có về vùng kính mới mà không khởi tạo lại
+        if (oldRadius > 0 && Math.abs(newRadius - oldRadius) > 0.5) {
+          const scale = newRadius / oldRadius;
+          Object.keys(particlePools).forEach(function (type) {
+            particlePools[type].forEach(function (p) {
+              p.x *= scale;
+              p.y *= scale;
+            });
+          });
+        }
+        lensRadius = newRadius;
+      }
+
+      function drawSphere(x, y, r, mainColor, lightColor, strokeColor) {
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = mainColor;
+        ctx.fill();
+        ctx.lineWidth = 1.1;
+        ctx.strokeStyle = strokeColor;
+        ctx.stroke();
+
+        // Điểm sáng 3D
+        ctx.beginPath();
+        ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.32, 0, Math.PI * 2);
+        ctx.fillStyle = lightColor;
+        ctx.fill();
+      }
+
+      function drawSingleParticle(p, scaleFactor) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.scale(scaleFactor, scaleFactor);
+
+        if (p.type === 'n2') {
+          // Cặp hạt xanh dương
+          drawSphere(-4.8, 0, 5.6, '#0066ff', '#93c5fd', '#003d99');
+          drawSphere(4.8, 0, 5.6, '#0066ff', '#93c5fd', '#003d99');
+        } else if (p.type === 'o2') {
+          // Cặp hạt xanh lá
+          drawSphere(-4.8, 0, 5.6, '#16b31e', '#86efac', '#14532d');
+          drawSphere(4.8, 0, 5.6, '#16b31e', '#86efac', '#14532d');
+        } else if (p.type === 'co2') {
+          // Mô hình 3 hạt thẳng hàng (Cam - Đen xám - Cam)
+          drawSphere(-7.5, 0, 4.8, '#f97316', '#fed7aa', '#9a3412');
+          drawSphere(7.5, 0, 4.8, '#f97316', '#fed7aa', '#9a3412');
+          drawSphere(0, 0, 5.4, '#334155', '#94a3b8', '#0f172a');
+        } else if (p.type === 'h2o') {
+          // Mô hình 3 hạt gấp khúc (Xanh ngọc ở giữa + 2 hạt trắng nhỏ)
+          drawSphere(-5.8, 4.2, 4.0, '#f8fafc', '#ffffff', '#64748b');
+          drawSphere(5.8, 4.2, 4.0, '#f8fafc', '#ffffff', '#64748b');
+          drawSphere(0, -1.5, 5.5, '#06b6d4', '#cffafe', '#0e7490');
+        } else if (p.type === 'toxic') {
+          // Đám mây tím có dấu đầu lâu trắng nhỏ
+          ctx.rotate(-p.rot); // Giữ đám mây đứng thẳng dễ nhìn
+          ctx.fillStyle = '#8b5cf6';
+          ctx.strokeStyle = '#581c87';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.arc(-5, 2, 5.2, 0, Math.PI * 2);
+          ctx.arc(5, 2, 5.2, 0, Math.PI * 2);
+          ctx.arc(0, -2.5, 6.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+
+          // Đầu lâu nhỏ trắng ở tâm
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(0, -1.2, 3.3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillRect(-1.8, 1.2, 3.6, 2.2);
+
+          ctx.fillStyle = '#581c87';
+          ctx.beginPath();
+          ctx.arc(-1.1, -1.2, 0.8, 0, Math.PI * 2);
+          ctx.arc(1.1, -1.2, 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (p.type === 'smoke') {
+          // Đám khói bụi xám
+          ctx.fillStyle = 'rgba(100, 116, 139, 0.82)';
+          ctx.strokeStyle = '#334155';
+          ctx.lineWidth = 1.1;
+          ctx.beginPath();
+          ctx.arc(-4.5, 1.5, 4.8, 0, Math.PI * 2);
+          ctx.arc(4.5, 1.5, 4.8, 0, Math.PI * 2);
+          ctx.arc(0, -2, 5.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      }
+
+      let lastFrameTime = performance.now();
+
+      function animateParticles(now) {
+        // Giới hạn delta time khi trở lại từ tab nền (tối đa 50ms)
+        const dt = Math.min(0.05, Math.max(0.001, (now - lastFrameTime) / 1000));
+        lastFrameTime = now;
+
+        const size = lensRadius * 2;
+        ctx.save();
+        ctx.scale(canvasDpr, canvasDpr);
+        ctx.clearRect(0, 0, size, size);
+
+        const scaleFactor = Math.max(0.72, Math.min(1.15, lensRadius / 115));
+        const boundaryR = Math.max(20, lensRadius - 14 * scaleFactor);
+
+        // Thứ tự vẽ để các hạt ít (CO2, H2O, Khí độc hại, Khói bụi) nổi rõ dễ quan sát
+        const drawOrder = ['n2', 'o2', 'h2o', 'co2', 'smoke', 'toxic'];
+
+        drawOrder.forEach(function (type) {
+          const pool = particlePools[type];
+          for (let i = 0; i < pool.length; i++) {
+            const p = pool[i];
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.rot += p.vRot * dt;
+
+            // Va chạm và phản xạ mềm tại biên hình tròn của lòng kính lúp
+            const dx = p.x - lensRadius;
+            const dy = p.y - lensRadius;
+            const dist = Math.hypot(dx, dy);
+
+            if (dist > boundaryR) {
+              const nx = dx / dist;
+              const ny = dy / dist;
+              p.x = lensRadius + nx * boundaryR;
+              p.y = lensRadius + ny * boundaryR;
+
+              const dot = p.vx * nx + p.vy * ny;
+              if (dot > 0) {
+                p.vx -= 2 * dot * nx;
+                p.vy -= 2 * dot * ny;
+              }
+            }
+
+            drawSingleParticle(p, scaleFactor);
+          }
+        });
+
+        // Lớp sương khói xám nhẹ khi tăng Khói, bụi (tối đa opacity 0.28 để luôn quan sát rõ hạt)
+        if (state.smoke > 0) {
+          const hazeAlpha = (state.smoke / 100) * 0.26;
+          ctx.fillStyle = 'rgba(100, 116, 139, ' + hazeAlpha.toFixed(3) + ')';
+          ctx.beginPath();
+          ctx.arc(lensRadius, lensRadius, lensRadius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.restore();
+        requestAnimationFrame(animateParticles);
+      }
+
+      /* ======================================================================
+         9. HỘP THOẠI SO SÁNH & HỘP THOẠI TRỢ GIÚP
+         ====================================================================== */
+      function getGasChangeBadge(initialBP, currentBP) {
+        if (currentBP > initialBP) {
+          return '<span class="change-badge change-up">Tăng</span>';
+        }
+        if (currentBP < initialBP) {
+          return '<span class="change-badge change-down">Giảm</span>';
+        }
+        return '<span class="change-badge change-same">Không đổi</span>';
+      }
+
+      function getPollutantChangeBadge(initialVal, currentVal) {
+        if (initialVal === 0 && currentVal > 0) {
+          return '<span class="change-badge change-appear">Xuất hiện</span>';
+        }
+        if (currentVal > initialVal) {
+          return '<span class="change-badge change-up">Tăng</span>';
+        }
+        if (currentVal < initialVal) {
+          return '<span class="change-badge change-down">Giảm</span>';
+        }
+        return '<span class="change-badge change-same">Không đổi</span>';
+      }
+
+      function renderCompareTables() {
+        // PHẦN 1: Thành phần khí (Các ô số chỉ ghi số, giữ 2 chữ số thập phân, không lặp dấu %)
+        const gasRows = [
+          { name: 'Nitrogen', init: INITIAL_STATE.n2BP, curr: state.n2BP },
+          { name: 'Oxygen', init: INITIAL_STATE.o2BP, curr: state.o2BP },
+          { name: 'Carbon dioxide', init: INITIAL_STATE.co2BP, curr: state.co2BP },
+          { name: 'Hơi nước', init: INITIAL_STATE.h2oBP, curr: state.h2oBP },
+          { name: 'Các khí khác', init: INITIAL_STATE.otherBP, curr: state.otherBP }
+        ];
+
+        dom.compareGasTbody.innerHTML = gasRows
+          .map(function (row) {
+            return (
+              '<tr>' +
+              '<td>' + row.name + '</td>' +
+              '<td class="num-col">' + formatBP(row.init) + '</td>' +
+              '<td class="num-col">' + formatBP(row.curr) + '</td>' +
+              '<td class="status-col">' + getGasChangeBadge(row.init, row.curr) + '</td>' +
+              '</tr>'
+            );
+          })
+          .join('');
+
+        // PHẦN 2: Mức bổ sung (Thang 0-100)
+        const pollutantRows = [
+          { name: 'Khí độc hại', init: INITIAL_STATE.toxic, curr: state.toxic },
+          { name: 'Khói, bụi', init: INITIAL_STATE.smoke, curr: state.smoke }
+        ];
+
+        dom.comparePollutantTbody.innerHTML = pollutantRows
+          .map(function (row) {
+            return (
+              '<tr>' +
+              '<td>' + row.name + '</td>' +
+              '<td class="num-col">' + row.init + '</td>' +
+              '<td class="num-col">' + row.curr + '</td>' +
+              '<td class="status-col">' + getPollutantChangeBadge(row.init, row.curr) + '</td>' +
+              '</tr>'
+            );
+          })
+          .join('');
+      }
+
+      let lastFocusedElement = null;
+
+      function openCompareModal() {
+        lastFocusedElement = document.activeElement;
+        renderCompareTables();
+        dom.compareModalBackdrop.classList.add('open');
+        dom.btnCloseCompare.focus();
+      }
+
+      function closeCompareModal() {
+        if (!dom.compareModalBackdrop.classList.contains('open')) return;
+        dom.compareModalBackdrop.classList.remove('open');
+        if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+          lastFocusedElement.focus();
+        }
+      }
+
+      function openHelpModal() {
+        lastFocusedElement = document.activeElement;
+        dom.helpModalBackdrop.classList.add('open');
+        dom.btnCloseHelp.focus();
+      }
+
+      function closeHelpModal() {
+        if (!dom.helpModalBackdrop.classList.contains('open')) return;
+        dom.helpModalBackdrop.classList.remove('open');
+        if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+          lastFocusedElement.focus();
+        }
+      }
+
+      dom.btnCompare.addEventListener('click', openCompareModal);
+      dom.btnCloseCompare.addEventListener('click', closeCompareModal);
+      dom.compareModalBackdrop.addEventListener('click', function (e) {
+        if (e.target === dom.compareModalBackdrop) closeCompareModal();
+      });
+
+      dom.btnOpenHelp.addEventListener('click', openHelpModal);
+      dom.btnCloseHelp.addEventListener('click', closeHelpModal);
+      dom.helpModalBackdrop.addEventListener('click', function (e) {
+        if (e.target === dom.helpModalBackdrop) closeHelpModal();
+      });
+
+      window.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          if (dom.compareModalBackdrop.classList.contains('open')) {
+            closeCompareModal();
+          }
+          if (dom.helpModalBackdrop.classList.contains('open')) {
+            closeHelpModal();
+          }
+        }
+      });
+
+      /* ======================================================================
+         10. NÚT ĐẶT LẠI (KHÔI PHỤC MẪU BAN ĐẦU)
+         ====================================================================== */
+      function resetSimulation() {
+        // Kết thúc lượt kéo nếu đang kéo
+        if (activeDrag && activeDrag.colEl) {
+          activeDrag.colEl.classList.remove('dragging');
+          activeDrag = null;
+        }
+
+        // Dừng âm cảnh báo & rung chuông ngay lập tức
+        stopActiveAlarm();
+
+        // Khôi phục giá trị mẫu ban đầu
+        state.n2BP = INITIAL_STATE.n2BP;
+        state.o2BP = INITIAL_STATE.o2BP;
+        state.co2BP = INITIAL_STATE.co2BP;
+        state.h2oBP = INITIAL_STATE.h2oBP;
+        state.otherBP = INITIAL_STATE.otherBP;
+        state.toxic = INITIAL_STATE.toxic;
+        state.smoke = INITIAL_STATE.smoke;
+
+        dom.sliderToxic.value = '0';
+        dom.sliderSmoke.value = '0';
+
+        // Đóng hộp thoại So sánh nếu đang mở
+        closeCompareModal();
+
+        updateAllUI();
+      }
+
+      dom.btnReset.addEventListener('click', resetSimulation);
+
+      /* ======================================================================
+         11. XỬ LÍ ĐỔI KÍCH THƯỚC MÀN HÌNH & XOAY THIẾT BỊ AN TOÀN
+         ====================================================================== */
+      function handleViewportChange() {
+        // Nếu đang kéo khi xoay màn hình: kết thúc lượt kéo an toàn, giữ giá trị cuối
+        if (activeDrag && activeDrag.colEl) {
+          activeDrag.colEl.classList.remove('dragging');
+          activeDrag = null;
+        }
+        resizeParticleCanvas();
+      }
+
+      window.addEventListener('resize', handleViewportChange);
+      window.addEventListener('orientationchange', handleViewportChange);
+
+      /* ======================================================================
+         12. KHỞI ĐỘNG MÔ PHỎNG KHI TẢI TRANG
+         ====================================================================== */
+      window.onload = function () {
+        resizeParticleCanvas();
+        updateAllUI();
+        lastFrameTime = performance.now();
+        requestAnimationFrame(animateParticles);
+      };
+    })();
+  </script>
+</body>
+</html>
